@@ -71,6 +71,11 @@ All specific =(s)= parts need to be implemented for each new code by inheriting 
 The changes to the parameter files are first done in memory.
 After completing the process of setting the parameters, write the file from memory to the file.
 
+Note that, as a design choice, parameters can only be set if they are
++ already in the config file
++ defined in the setup specific config
+which is to avoid typo when setting the parameters automatically.
+
 * Functions to be provided by =sheep=
 
 ** =set_param( name, value )= =(g)=
