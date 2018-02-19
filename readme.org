@@ -242,8 +242,16 @@ Define a copy function that copies both, files and directories.
           # If the config dir is not an absolute path assume its meant to be inside the setup dir.
           if config_dir != os.path.abspath(config_dir):
               config_path = os.path.join( setup_dir, config_dir )
-          sources_file = os.path.join(config_dir, 'sources.txt')
-          parameters_file = os.path.join(config_dir, 'parameters.txt')
+          try:
+              sources_file = os.path.join(config_dir, 'sources.txt')
+          except FileNotFoundError:
+              print("Please give the right path for the setup and config dir and provide a sources.txt file!")
+              raise
+          try:
+              parameters_file = os.path.join(config_dir, 'parameters.txt')
+          except FileNotFoundError:
+              print("Please give the right path for the setup and config dir and provide a parameters.txt file!")
+              raise
           self.load_src_list( sources_file )
           self.load_parameter_config( parameters_file )
 
