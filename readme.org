@@ -483,6 +483,8 @@ There should be some sample config files.
 parameters.txt	sources.txt
 :END:
 
+*** Missing config
+
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   try:
       s = Sheep('samples')
@@ -495,6 +497,8 @@ parameters.txt	sources.txt
 [Errno 2] No such file or directory: 'sheep/sources.txt'
 :END:
 
+*** Missing mandatory script file
+
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   s = Sheep('samples', 'config')
   try:
@@ -506,4 +510,19 @@ parameters.txt	sources.txt
 #+RESULTS:
 :RESULTS:
 Cached error: Could not find start.py which is a mandatory script when using sheep!
+:END:
+
+*** Param not known
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+  s = Sheep('samples', 'config')
+  try:
+      s.enforce_param_known( 'foo' )
+  except ValueError as e:
+      print("Cached error: {}".format(e))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+Cached error: Setting the parameter foo is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.
 :END:
