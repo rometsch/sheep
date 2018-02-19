@@ -235,7 +235,6 @@ Define a copy function that copies both, files and directories.
           self.uuid = str(uuid.uuid4())
           self.temp_dir = None
           self.temp_dir_obj = None
-          self.provide_temp_dir()
           self.src_list = []
           self.parameters = {}
           self.tar_file = None
