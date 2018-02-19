@@ -237,6 +237,7 @@ Define a copy function that copies both, files and directories.
           self.temp_dir_obj = None
           self.src_list = []
           self.parameters = {}
+          self.parameters_in_config = {}
           self.tar_file = None
           self.setup_dir = os.path.abspath(setup_dir)
           # If the config dir is not an absolute path assume its meant to be inside the setup dir.
@@ -310,17 +311,22 @@ Define a copy function that copies both, files and directories.
           """ Move the tar file to the given location. """
           shutil.move(self.tar_file, dst)
 
-      def translate_param_name( to_convention, name ):
-          pass
+      def enforce_param_known(self, name):
+          if not (name in self.parameters or name in self.parameters_in_config):
+              raise ValueError("Setting the parameter {} is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.".format(name))
 
       def set_param( name, value ):
           pass
+
+      def translate_param_name(self, to_convention, name ):
+          pass
+
 
 #+END_SRC
 
 #+RESULTS:
 :RESULTS:
-# Out[165]:
+# Out[172]:
 :END:
 
 * Tests
