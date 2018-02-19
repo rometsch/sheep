@@ -162,16 +162,17 @@ parameters to a parameter file when given its filename.
 
 Import libraries
 
-#+BEGIN_SRC ipython :session sheep :results none
+#+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
 import os
 import tempfile
 import shutil
 import uuid
+import tarfile
 #+END_SRC
 
 Define a function to expand pathes with user variables and the ~ shorthand.
 
-#+BEGIN_SRC ipython :session sheep :results none
+#+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
   def expand_path(path):
       path = os.path.expanduser(path)
       path = os.path.expandvars(path)
@@ -212,31 +213,53 @@ Define a copy function that copies both, files and directories.
               shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
 #+END_SRC
 
-#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep.py
   class Sheep:
 
-      def __init__(self, config_file=None):
+      def __init__(self, config_dir=None):
           self.uuid = str(uuid.uuid4())
           self.temp_dir = None
           self.temp_dir_obj = None
           self.provide_temp_dir()
           self.src_list = []
+          self.parameters = {}
+          self.tar_file = None
+          if not config_dir is None:
+              sources_file = os.path.join(config_dir, 'sources.txt')
+              parameters_file = os.path.join(config_dir, 'parameters.txt')
+              self.load_src_list( sources_file )
+              self.load_parameter_config( parameters_file )
+
 
       def provide_temp_dir(self):
+          """ Create a save temporary directory, unique for every instance of sheep. """
           if self.temp_dir is None:
               self.temp_dir_obj = tempfile.TemporaryDirectory(prefix = self.uuid)
               self.temp_dir = self.temp_dir_obj.name
 
-      def provide_src_list(self, sources_file):
+      def load_src_list(self, sources_file):
           """ Provide a list of paths to be copied to the temp directory
           directory. User variables and the ~ shorthand are expanded. """
-          if len(self.src_list) > 0:
-              return
           lines = parse_file_to_lines( sources_file )
           self.src_list = [expand_path(line) for line in lines]
 
-      def get_temp_path( filename ):
+      def load_parameter_config(self, parameters_file):
+          """ Load the names of the parameters, how to translate them from generic names
+          and the desitination file from the parameters.txt file. """
+          lines = parse_file_to_lines( parameters_file )
+          for line in lines:
+              parts = line.split()
+              if parts[1] == '-':
+                  parts[1] = parts[0]
+              self.parameters[parts[0]] = parts[1:]
+
+      def get_temp_path(self, filename ):
           return os.path.join( self.temp_dir, filename)
+
+      def list_temp_dir(self):
+          """ Return a list with absolute paths of every file or directory in
+          the temp folder. """
+          return [os.path.join(self.temp_dir, f) for f in os.listdir(self.temp_dir)]
 
       def copy_src(self):
           if len(self.src_list) == 0:
@@ -244,15 +267,30 @@ Define a copy function that copies both, files and directories.
           for path in self.src_list:
               copy(path, self.temp_dir)
 
+      def make_tar(self):
+          """ Make a gzipped tar file containing all files and directories
+          inside the tmp folder. """
+          self.tar_file = self.get_temp_path( 'content.tgz' )
+          with tarfile.open( self.tar_file , 'x:gz') as tf:
+              for path in self.list_temp_dir():
+                  tf.add(path, arcname = path.lstrip(self.temp_dir))
 
+      def move_tar_to(self, dst):
+          """ Move the tar file to the given location. """
+          shutil.move(self.tar_file, dst)
+
+      def translate_param_name( to_convention, name ):
+          pass
+
+      def set_param( name, value ):
+          pass
 
 #+END_SRC
 
 #+RESULTS:
 :RESULTS:
-# Out[65]:
+# Out[138]:
 :END:
-
 
 * Tests
 
