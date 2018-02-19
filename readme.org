@@ -119,27 +119,19 @@ The configuration of =sheep= is accomplished using simple tab separated plain te
 Comments in the configuration files can be done using the =#= character.
 All text following a =#= character is ignored.
 
-Every code specific sheep is supposed to have its own directory containing the code specific configuration files.
+Every code specific sheep is supposed to have its own directory containing the configuration files.
+This directory should ideally be inside the directory where the specific setup for the code is stored.
 
-Search in the following order the directories for configuration files:
-1. =~/.sheep=
-2. =~/.config/sheep=
-
-The directory structure of the =sheep= configuration folder is:
+The directory structure of a setup could thus be
 
 #+BEGIN_EXAMPLE
-+ .sheep
-+--- config.txt				# gerneral configuration for sheep
-+--- parameters.txt			# contains the generic parameter names
-+--+ Code1
-:  +--- parameters.txt
-:  +--- sources.txt
-+--+ Code2
-:  +--- parameters.txt
-:  +--- sources.txt
-...
++ source_of_code
++ ini_file_for_code.txt
++ ...
++ sheep
+  + sources.txt		# Files and folders to be copied from the parent dir
+  + parameters.txt  # parameter names and locations
 #+END_EXAMPLE
-
 
 ** The =parameters.txt= file.
 
@@ -152,6 +144,15 @@ For every parameter, there must be a line defining the necessary information
 The syntax is
 #+BEGIN_EXAMPLE
 generic_name	code_specific_name	param_file
+#+END_EXAMPLE
+
+If the code specific name is the same as the generic name, the second field should contain a minus =-=.
+
+An exmaple:
+
+#+BEGIN_EXAMPLE
+DiskMass	-	code_params.txt		# same name
+AspectRatio	h_asp	code_params.txt	# different names
 #+END_EXAMPLE
 
 Each implementation of the class =Sheep= must define how to read and write
