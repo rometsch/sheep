@@ -368,18 +368,68 @@ print(str(uuid.uuid4()))
 :RESULTS:
 0256843e-4b64-459e-b021-f97868677813
 :END:
-** copy src folder
+** copy src folder and make a tar
 
-#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
 s = Sheep()
 src_dir = '/home/thomas/repo/fargo3d'
 s.src_list = [os.path.join(src_dir, f) for f in os.listdir('/home/thomas/repo/fargo3d')]
-s.src_list = []
 s.copy_src()
 print(os.listdir( s.temp_dir ))
+print(s.list_temp_dir())
 #+END_SRC
 
 #+RESULTS:
 :RESULTS:
-# Out[66]:
+['planets', 'test_suite', 'Makefile', 'outputs', 'README', 'version.txt', 'matplotlibrc', 'in', 'license.txt', 'scripts', 'src', 'setups', 'utils', 'std']
+['/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/planets', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/test_suite', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/Makefile', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/outputs', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/README', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/version.txt', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/matplotlibrc', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/in', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/license.txt', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/scripts', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/src', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/setups', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/utils', '/tmp/65acb71f-fae8-4476-8a1d-380738d8f6b14vltgy88/std']
+:END:
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+s.make_tar()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[127]:
+:END:
+
+Inspect the tar file
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+  with tarfile.open( s.tar_file, 'r:gz') as tf:
+      print(tf.getnames())
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[116]:
+:END:
+
+Now move the tar file to another folder for testing the =move_tar_to= function.
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+move_to_dir = os.path.join(s.temp_dir, 'move_to')
+os.makedirs( move_to_dir)
+s.move_tar_to( os.path.join( move_to_dir, "sheeps_tmp_content.tgz"))
+os.listdir( move_to_dir)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[128]:
+: ['sheeps_tmp_content.tgz']
+:END:
+** test the config file parsers
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+s = Sheep('sampleconfig')
+print(s.parameters)
+print(s.src_list)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+{'DiskMass': ['Mdisk', '0.1'], 'Rstar': ['Rstar', '1.e-5']}
+['readme.org']
 :END:
