@@ -98,7 +98,7 @@ To go the other way around and translate from the parameter with name 'FoO' from
 
 The translation dictionaries need to be provided by the code specific implementation in a file called =parameters.txt=.
 
-** =check_for_scripts()= =(g)=
+** =enforce_scripts_available()= =(g)=
 
 This functions checks for the scripts
 + =start.py=
@@ -255,6 +255,12 @@ Define a copy function that copies both, files and directories.
           self.load_src_list( sources_file )
           self.load_parameter_config( parameters_file )
 
+      def enforce_scripts_available(self):
+          """ Check whether all required scripts are available inside the temp dir. """
+          files = os.listdir(self.temp_dir)
+          for s in ['start.py', 'restart.py', 'make.py']:
+              if not s in files:
+                  raise FileNotFoundError("Could not find {} which is a mandatory script when using sheep!".format(s))
 
       def provide_temp_dir(self):
           """ Create a save temporary directory, unique for every instance of sheep. """
@@ -314,7 +320,7 @@ Define a copy function that copies both, files and directories.
 
 #+RESULTS:
 :RESULTS:
-# Out[145]:
+# Out[165]:
 :END:
 
 * Tests
@@ -481,4 +487,17 @@ parameters.txt	sources.txt
 #+RESULTS:
 :RESULTS:
 [Errno 2] No such file or directory: 'sheep/sources.txt'
+:END:
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+  s = Sheep('samples', 'config')
+  try:
+      s.enforce_scripts_available()
+  except FileNotFoundError as e:
+      print("Cached error: {}".format(e))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+Cached error: Could not find start.py which is a mandatory script when using sheep!
 :END:
