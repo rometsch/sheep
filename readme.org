@@ -181,7 +181,7 @@ Define a function to expand pathes with user variables and the ~ shorthand.
 
 Define a function to parse a textfile and remove empty lines and text after #.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep.py
   def parse_file_to_lines( filepath ):
       """ Parse a textfile into a list with lines.
       Remove all text following the cahracter #.
@@ -200,7 +200,7 @@ Define a function to parse a textfile and remove empty lines and text after #.
 
 Define a copy function that copies both, files and directories.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep.py
   def copy(src, dst):
       """ Copy both files and directories from src to dst.
       For files, copy2() and for directories copytree is used. """
