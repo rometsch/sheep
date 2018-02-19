@@ -1,0 +1,346 @@
+#+TITLE: =sheep= : a Simulation HElpEr for Parameters
+#+AUTHOR: Thomas Rometsch
+#+SETUPFILE: styles/theme-readtheorg-local.setup
+
+* Introduction
+
+Performing physics simulations requiries setting them up in the first place.
+The physical setup needs to be defined, usually by writing some extra code for initial conditions.
+At least this is the case for simulations of protoplanetary disks, the simulations I do, and for the codes PLUTO and FARGO3D.
+
+In addition to the setup (the FARGO3D user guide explains the concept quite nicely), parameters have to be set.
+Often, multiple runs of the same setup with different parameters are required.
+One extreme of that are large parameter studies, in which the code should remain the same and only parameteres change.
+
+Setting the parameters by hand in a text editor is fine for a small number of runs.
+Having to deal with a large parameter space, however, this gets very tedious and time consuming.
+Since the problem is well defined - changing a string in a text file - the process can be automated.
+
+Using different codes with possibly different structure to simulate the same physical setup makes things even worse.
+Let me illustrate this with an example.
+I aim at running the same physical setup with two codes, the PLUTO and FARGO3D astrophysics hyrdordynamical codes.
+The both allow the usage of setups and the both have files for specifying parameter.
+In both cases there are two different parameter files
+One for parameters which need to be known before compiling the code and one file for parameters which can be set after compilation.
+Since I compile the code for every run anyways (the compilation time is neglegible compared to the simulation time), I don't want to bother with that.
+I simply want to specify parameters using only one programmable interface for any type of paramerter (pre-compilation, post-compilation) and for any code.
+
+This is where =sheep= comes in.
+
+* Goals
+
+1. abstract the process of setting parameters
+   - when doing physics research, technical details should be irrelevant
+   - hide different types of parameters (pre-/post-compilation) behind a common interface
+2. define a generic interface for preparing physics simulations for different codes
+   - streamline the preparation of simulations by providing a common interface
+   - define common names for the parameters and translate them to each code
+   - adapt to specific requirements of code in an automatic way
+	 * choice of units
+	 * syntax rules
+3. provide scripts with a common interface
+   - starting
+	 * number of CPU cores
+	 * number of GPU cores
+	 * GPU device
+   - restarting
+	 * same as in starting
+	 * output file to be used
+   - making the code considering architechture choices
+	 * parallel vs sequential (MPI)
+	 * CPU vs GPU (CUDA)
+4. support the usage of setups
+5. check that parameters are reasonable by specifying simple rules (e.g. boundaries on the value)
+
+* Implementation
+
+Here is an outline of the steps =sheep= needs to be able to do.
+Generic steps which are the same for avery code are marked by =(g)=.
+Steps specific for each code are marked by =(s)=.
+
+1. =(g)= Provide a temporary directory in which to prepare the simulation files.
+2. =(s)= Copy all necessary files into the temp directory.
+3. =(s)= Set the parameters using the common interface which launches a code specific parser.
+4. =(s)= Provide the (re)start and make scripts
+5. =(g)= Pack everything into a tar ball.
+
+The programming language is =Python3=. This program probably doesn't support =Python2=!
+
+All specific =(s)= parts need to be implemented for each new code by inheriting the abstract interface.
+
+The changes to the parameter files are first done in memory.
+After completing the process of setting the parameters, write the file from memory to the file.
+
+* Functions to be provided by =sheep=
+
+** =set_param( name, value )= =(g)=
+
+The function to set parameters should be of the form
+
++ =name= is the common name of the parameter which is translated to the parameter name in the code via a dictionary.
++ =value= is the value (or possibly multiple values in form of a list) of the parameter
+
+Depending on the parameter, an appropriate code specific function is called.
+Therefore, there must be an entry in the file =parameters.txt=
+
+** =translate_param_name( to_convention, name )= =(g)=
+
+Translate the parameter with =name= to the naming =to_convention=.
+
+E.g. to translate from the generic parameter name =foo= to the code specific name of the code =BarCode= the call would be =translate_param_name( 'BarCode', 'foo')=.
+
+To go the other way around and translate from the parameter with name 'FoO' from the code =BarCode= to the generic parameter name the call looks like =translate_param_name( 'generic', 'FoO')=.
+
+The translation dictionaries need to be provided by the code specific implementation in a file called =parameters.txt=.
+
+** =provide_temp_dir()= =(g)=
+
+This function provides a temporary directory.
+The path is written into an object variable.
+
+** =copy_src()= =(s)=
+
+Copy the source files from a pre-defined directory to the temp directory for editing.
+The source files/folders need to be specified in =sources.txt=.
+
+** =load_param_file( filepath )= =(g), (s)=
+
+Loads the parameter file at =filepath= into memory.
+Automatically determine the syntax from the context.
+
+** =save_param_file( filepath )= =(g), (s)=
+
+Saves the parameter file from the memory to =filepath=.
+Automatically determine the syntax from the context.
+
+* Configuration
+
+The configuration of =sheep= is accomplished using simple tab separated plain text files.
+Comments in the configuration files can be done using the =#= character.
+All text following a =#= character is ignored.
+
+Every code specific sheep is supposed to have its own directory containing the code specific configuration files.
+
+Search in the following order the directories for configuration files:
+1. =~/.sheep=
+2. =~/.config/sheep=
+
+The directory structure of the =sheep= configuration folder is:
+
+#+BEGIN_EXAMPLE
++ .sheep
++--- config.txt				# gerneral configuration for sheep
++--- parameters.txt			# contains the generic parameter names
++--+ Code1
+:  +--- parameters.txt
+:  +--- sources.txt
++--+ Code2
+:  +--- parameters.txt
+:  +--- sources.txt
+...
+#+END_EXAMPLE
+
+
+** The =parameters.txt= file.
+
+This is the place where the parameters of a specific code are listed.
+For every parameter, there must be a line defining the necessary information
++ generic name
++ code specific name
++ file to write the parameter to
+
+The syntax is
+#+BEGIN_EXAMPLE
+generic_name	code_specific_name	param_file
+#+END_EXAMPLE
+
+Each implementation of the class =Sheep= must define how to read and write
+parameters to a parameter file when given its filename.
+
+* Code
+
+Import libraries
+
+#+BEGIN_SRC ipython :session sheep :results none
+import os
+import tempfile
+import shutil
+import uuid
+#+END_SRC
+
+Define a function to expand pathes with user variables and the ~ shorthand.
+
+#+BEGIN_SRC ipython :session sheep :results none
+  def expand_path(path):
+      path = os.path.expanduser(path)
+      path = os.path.expandvars(path)
+      return path
+#+END_SRC
+
+Define a function to parse a textfile and remove empty lines and text after #.
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+  def parse_file_to_lines( filepath ):
+      """ Parse a textfile into a list with lines.
+      Remove all text following the cahracter #.
+      Discard empty lines."""
+      lines = []
+
+      with open(filepath, 'r') as f:
+          for line in f:
+              # Split the line and remove part after the first #
+              line = line.strip().split('#')[0].strip()
+              if line == "":
+                  continue
+              lines.append(line)
+      return lines
+#+END_SRC
+
+Define a copy function that copies both, files and directories.
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+  def copy(src, dst):
+      """ Copy both files and directories from src to dst.
+      For files, copy2() and for directories copytree is used. """
+      try:
+          shutil.copy2(src, dst)
+      except IsADirectoryError:
+          try:
+              shutil.copytree(src, dst)
+          except FileExistsError:
+              shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
+#+END_SRC
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+  class Sheep:
+
+      def __init__(self, config_file=None):
+          self.uuid = str(uuid.uuid4())
+          self.temp_dir = None
+          self.temp_dir_obj = None
+          self.provide_temp_dir()
+          self.src_list = []
+
+      def provide_temp_dir(self):
+          if self.temp_dir is None:
+              self.temp_dir_obj = tempfile.TemporaryDirectory(prefix = self.uuid)
+              self.temp_dir = self.temp_dir_obj.name
+
+      def provide_src_list(self, sources_file):
+          """ Provide a list of paths to be copied to the temp directory
+          directory. User variables and the ~ shorthand are expanded. """
+          if len(self.src_list) > 0:
+              return
+          lines = parse_file_to_lines( sources_file )
+          self.src_list = [expand_path(line) for line in lines]
+
+      def get_temp_path( filename ):
+          return os.path.join( self.temp_dir, filename)
+
+      def copy_src(self):
+          if len(self.src_list) == 0:
+              print("Warning: Nothing is copyied b.c. src_list is empty.")
+          for path in self.src_list:
+              copy(path, self.temp_dir)
+
+
+
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[65]:
+:END:
+
+
+* Tests
+
+** temp dir creation
+
+#+BEGIN_SRC ipython :session sheep :results output drawer
+  s = Sheep()
+  s.provide_temp_dir()
+  s.temp_dir
+  with open(os.path.join(s.temp_dir, "test.txt"), 'w') as of:
+      of.write("foo")
+  with open(os.path.join(s.temp_dir, "test.txt"), 'r') as fi:
+      print(fi.read())
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+foo
+:END:
+
+** text file to line list parser
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+  tmpdir = tempfile.TemporaryDirectory()
+  tmp = tmpdir.name
+  tmpfile = os.path.join(tmp, 'test.txt')
+  with open(tmpfile, 'w') as tf:
+      tf.write('# First comment line\n')
+      tf.write('some important data\n')
+      tf.write('data with # comment\n')
+  print(parse_file_to_lines(tmpfile))
+  tmpdir.cleanup()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+['some important data', 'data with']
+:END:
+
+** copy function
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+    # Create a temp folder to work in
+  with tempfile.TemporaryDirectory(prefix = str(uuid.uuid4())) as tmp:
+
+      # Create a file and a folder to copy.
+      testdir = os.path.join(tmp, 'from/testdir')
+      os.makedirs( testdir )
+      tmpfile = os.path.join(tmp, 'from/test.txt')
+      with open(tmpfile, 'w') as tf:
+          tf.write('some file')
+
+      # Make a folder to copy to and try to copy
+      todir = os.path.join(tmp, 'to')
+      os.makedirs( todir )
+      copy( tmpfile, todir )
+      copy( testdir, todir )
+
+      print(os.listdir( todir ))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+['testdir', 'test.txt']
+:END:
+
+** get a uuid
+
+#+BEGIN_SRC ipython :session :exports both :results output drawer
+import uuid
+print(str(uuid.uuid4()))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+0256843e-4b64-459e-b021-f97868677813
+:END:
+** copy src folder
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+s = Sheep()
+src_dir = '/home/thomas/repo/fargo3d'
+s.src_list = [os.path.join(src_dir, f) for f in os.listdir('/home/thomas/repo/fargo3d')]
+s.src_list = []
+s.copy_src()
+print(os.listdir( s.temp_dir ))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[66]:
+:END:
