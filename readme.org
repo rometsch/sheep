@@ -216,7 +216,7 @@ Define a copy function that copies both, files and directories.
 #+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep.py
   class Sheep:
 
-      def __init__(self, config_dir=None):
+      def __init__(self, setup_dir, config_dir='sheep'):
           self.uuid = str(uuid.uuid4())
           self.temp_dir = None
           self.temp_dir_obj = None
@@ -224,11 +224,13 @@ Define a copy function that copies both, files and directories.
           self.src_list = []
           self.parameters = {}
           self.tar_file = None
-          if not config_dir is None:
-              sources_file = os.path.join(config_dir, 'sources.txt')
-              parameters_file = os.path.join(config_dir, 'parameters.txt')
-              self.load_src_list( sources_file )
-              self.load_parameter_config( parameters_file )
+          # If the config dir is not an absolute path assume its meant to be inside the setup dir.
+          if config_path != os.path.abspath(config_path):
+              config_path = os.path.join( setup_dir, config_dir )
+          sources_file = os.path.join(config_dir, 'sources.txt')
+          parameters_file = os.path.join(config_dir, 'parameters.txt')
+          self.load_src_list( sources_file )
+          self.load_parameter_config( parameters_file )
 
 
       def provide_temp_dir(self):
