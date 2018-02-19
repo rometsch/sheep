@@ -314,7 +314,7 @@ Define a copy function that copies both, files and directories.
 
 #+RESULTS:
 :RESULTS:
-# Out[138]:
+# Out[145]:
 :END:
 
 * Tests
@@ -457,4 +457,28 @@ print(s.src_list)
 :RESULTS:
 {'DiskMass': ['Mdisk', '0.1'], 'Rstar': ['Rstar', '1.e-5']}
 ['readme.org']
+:END:
+** Trigger errors for missing config files
+
+There should be some sample config files.
+
+#+BEGIN_SRC ipython :session :exports both :results output drawer
+!ls samples/config
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+parameters.txt	sources.txt
+:END:
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output drawer
+  try:
+      s = Sheep('samples')
+  except Exception as e:
+      print(e)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+[Errno 2] No such file or directory: 'sheep/sources.txt'
 :END:
