@@ -346,4 +346,128 @@ DensityFloor     1.e-20
 WDThetaBegRel    0.8
 WDRIn            0.4
 WDROut           2.1
-:END:
+#+end_example
+
+Looks just as desired.
+
+** Handle name collisions
+
+There could be the case that two parameters in different blocks have the same name.
+For the situation here, astrophysical simulations, this is probably a bad idea
+anyways, but better be safe than sorry.
+
+Build a dict of parameters containing the group of the parameter.
+Put the group in a list and simply append a possible additional group names.
+This makes it easy to handle collisions and at the same time makes finding the
+parameters easy.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  def parameter_lookup_dict(dct):
+      """ Make a dict to lookup where a given parameter is stored. """
+      lt = ODict()
+      for group in dct:
+          for key in dct[group]:
+              if key in lt:
+                  lt[key].append(group)
+              else:
+                  lt[key] = [group]
+      return lt
+#+END_SRC
+
+Test the creation of the lookup table.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results output
+import pprint
+pprint.pprint(parameter_lookup_dict(cfg_dict))
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+OrderedDict([('X1-grid', ['Grid']),
+             ('X2-grid', ['Grid']),
+             ('X3-grid', ['Grid']),
+             ('Levels', ['Chombo Refinement']),
+             ('Ref_ratio', ['Chombo Refinement']),
+             ('Regrid_interval', ['Chombo Refinement']),
+             ('Refine_thresh', ['Chombo Refinement']),
+             ('Tag_buffer_size', ['Chombo Refinement']),
+             ('Block_factor', ['Chombo Refinement']),
+             ('Max_grid_size', ['Chombo Refinement']),
+             ('Fill_ratio', ['Chombo Refinement']),
+             ('CFL', ['Time']),
+             ('CFL_max_var', ['Time']),
+             ('tstop', ['Time']),
+             ('first_dt', ['Time']),
+             ('Solver', ['Solver']),
+             ('X1-beg', ['Boundary']),
+             ('X1-end', ['Boundary']),
+             ('X2-beg', ['Boundary']),
+             ('X2-end', ['Boundary']),
+             ('X3-beg', ['Boundary']),
+             ('X3-end', ['Boundary']),
+             ('uservar', ['Static Grid Output']),
+             ('output_dir', ['Static Grid Output']),
+             ('dbl', ['Static Grid Output']),
+             ('flt', ['Static Grid Output']),
+             ('vtk', ['Static Grid Output']),
+             ('tab', ['Static Grid Output']),
+             ('ppm', ['Static Grid Output']),
+             ('png', ['Static Grid Output']),
+             ('log', ['Static Grid Output']),
+             ('analysis', ['Static Grid Output']),
+             ('Checkpoint_interval', ['Chombo HDF5 output']),
+             ('Plot_interval', ['Chombo HDF5 output']),
+             ('SigmaRef', ['Parameters']),
+             ('Mplanet', ['Parameters']),
+             ('Pericenter', ['Parameters']),
+             ('AspectRatio', ['Parameters']),
+             ('ViscosityAlpha', ['Parameters']),
+             ('Inclination', ['Parameters']),
+             ('Rplanet', ['Parameters']),
+             ('Smoothing', ['Parameters']),
+             ('ForceCutoff', ['Parameters']),
+             ('DensityFloor', ['Parameters']),
+             ('WDThetaBegRel', ['Parameters']),
+             ('WDRIn', ['Parameters']),
+             ('WDROut', ['Parameters'])])
+#+end_example
+
+* Parser class
+
+Define a parser class to bring everything together
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+  class IniParser:
+
+      def __init__(self, inifile):
+          self.inifile = os.path.abspath(inifile)
+          self.parse_file_to_dict()
+          self.make_parameter_lookup_dict()
+
+      def parse_file_to_dict(self):
+          """ Load the ini file into memory. """
+          with open(self.inifile, 'r') as rf:
+              self.cfg_dct, self.stats = parse_to_dict(rf)
+
+      def parse_dict_to_str(self):
+          """ Write the dict into lines. """
+          return parse_dict_to_str(self.cfg_dct, self.stats)
+
+      def write_to_file(self, path=None):
+          """ Write the config back to the file by default or to any file specified by *path*. """
+          if path is None:
+              path = self.inifile
+          with open(path, 'w') as of:
+              of.write('\n'.join(self.parse_dict_to_str()))
+
+      def make_parameter_lookup_dict(self):
+          self.parameter_lookup_dict = parameter_lookup_dict(self.cfg_dct)
+#+END_SRC
+
+Now load the ini using the class and print it.
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  par = IniParser('samples/plutoSetup/pluto.ini')
+  for l in par.parse_dict_to_str():
+      print(l)
+#  par.write_to_file('test.ini')
+#+END_SRC
