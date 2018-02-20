@@ -1,4 +1,4 @@
-#+TITLE: =sheep= : a Simulation HElpEr for Parameters
+#+TITLE: =sheep= : a Simulation HElpEr for setting Parameters
 #+AUTHOR: Thomas Rometsch
 #+SETUPFILE: styles/theme-readtheorg-local.setup
 
