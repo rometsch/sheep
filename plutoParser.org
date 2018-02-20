@@ -1,0 +1,234 @@
+#+TITLE: Parsers for the ini files of the PLUTO astro code
+#+AUTHOR: Thomas Rometsch
+
+* Introduction
+
+This document is a development file for an implemenation of a parser for
+runtime config files of the PLUTO astrophysics code.
+
+* Features
+
+** TODO ini file to memory
+
++ load the ini file and parse it into an ordered dictionary
++ the root dict contains all dicts of groups
++ the dicts for groups are also ordered and have lists to store the values
+
+** TODO Save the config dict to file
+
++ parse the config dict into lines using some rule to format the white spaces
+  (why not make the file pretty if we parse it anyways)
++ save the generated lines to a file, possibly the same as the source file
+
+** TODO Replace parameters
+
++ replace the values of parameters at arbitrary positions.
++ support only naming the parameter without the group
++ raise exceptions upon collision
++ support specifying the group as optional parameter
+
+* Syntax
+
+The syntax is probably identical to the one of Microsoft ini files.
+There is support for different groups, which are indicated by =[]=.
+Key value pairs are white-space separated and there might be multiple values.
+
+An example ilustrated the syntax. It is taken from a 3D PLUTO setup and
+configures the grid and some parameters.
+
+#+BEGIN_EXAMPLE
+[Grid]
+
+X1-grid    1    0.4   256   u    2.5
+X2-grid    1   -0.3   72    u    0.3
+X3-grid    1    0.0   512   u    6.283185307
+
+...
+
+[Parameters]
+
+Mplanet          6.e-5
+AspectRatio      0.1
+ViscosityAlpha   0.004
+#+END_EXAMPLE
+
+* Sample config
+
+A sample config is available at =samples/plutoSetup/pluto.ini=.
+
+
+* Code
+
+** Imports
+
+Import libraries
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+import os
+from collections import OrderedDict as ODict
+#+END_SRC
+
+** Loading the ini file
+
+Load the file into lines
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  lines = []
+  with open('samples/plutoSetup/pluto.ini', 'r') as cf:
+      for line in cf:
+          lines.append(line.strip())
+#+END_SRC
+
+inspect the lines in a different buffer.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+print(lines)
+#+END_SRC
+
+The output looks as expected and shows that there are also some tabs as white space characters.
+
+** Parse groups to lists
+
+Now go through the lines and extract groups.
+Write all lines after a line which indicates a group to a separate list.
+These are lines having a =[= as their first character.
+Also make sure that the last character is a =]= and raise an exception if its missing.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results raw drawer
+  def parse_to_grouped_lines(lines):
+      # Initialize a first group to store key value pairs listed before the first group.
+      grouped_lines = [[]]
+      for line in lines:
+          # Skip empty lines
+          if line == "":
+              continue
+          # Identiy a header line
+          if line[0] == '[':
+              if line[-1] != ']':
+                  raise ValueError('Found a line starting wih "[" but not ending in "]"!')
+              grouped_lines.append([line])
+          # Append normal lines to the last group
+          else:
+              grouped_lines[-1].append(line)
+      return grouped_lines
+#+END_SRC
+
+Print the lines
+#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+  for group in parse_to_grouped_lines(lines):
+      print(group)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+[]
+['[Grid]', 'X1-grid    1    0.4            256    u    2.5', 'X2-grid   1   1.0471975511965976   72   u   2.0943951023931953', 'X3-grid    1    0.0            512    u    6.283185307']
+['[Chombo Refinement]', 'Levels           4', 'Ref_ratio        2 2 2 2 2', 'Regrid_interval  2 2 2 2', 'Refine_thresh    0.3', 'Tag_buffer_size  3', 'Block_factor     8', 'Max_grid_size    64', 'Fill_ratio       0.75']
+['[Time]', 'CFL              0.33', 'CFL_max_var      1.1', 'tstop            20.0', 'first_dt         1.e-4']
+['[Solver]', 'Solver         hllc']
+['[Boundary]', 'X1-beg\t      reflective', 'X1-end        reflective', 'X2-beg        reflective', 'X2-end        reflective', 'X3-beg        periodic', 'X3-end        periodic']
+['[Static Grid Output]', 'uservar    0', 'output_dir ./out/sim', 'dbl       1.0  -200   single_file', 'flt       -1.0  -1   single_file', 'vtk       -1.0 -1   single_file', 'tab       -1.0  -1', 'ppm       -1.0  -1', 'png       -1.0  -1', 'log        5', 'analysis  0.001']
+['[Chombo HDF5 output]', 'Checkpoint_interval  -1.0  0', 'Plot_interval         1.0  0']
+['[Parameters]', 'SigmaRef\t\t\t0.000645246309031885', 'Mplanet\t\t\t\t6.e-5', 'Pericenter          -1.5707963268', 'AspectRatio\t\t\t0.1', 'ViscosityAlpha\t\t0.004', 'Inclination\t\t\t50.0', 'Rplanet\t\t\t\t5.2', 'Smoothing\t\t\t0.5', 'ForceCutoff\t\t\t0.8', 'DensityFloor\t\t1.e-20', 'WDThetaBegRel\t\t0.8', 'WDRIn\t\t\t\t0.4', 'WDROut\t\t\t\t2.1']
+:END:
+
+** Parse groups to
+
+Now parse the lines into ordered dicts.
+Split the lines with and store the first part as key and the rest as values.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  def parse_to_dict(lines):
+      # Initialize a first group to store key value pairs listed before the first group.
+      groups = ODict()
+      name = 'root'
+      groups[name] = []
+      for line in lines:
+          # Skip empty lines
+          if line == "":
+              continue
+          # Identiy a header line
+          if line[0] == '[':
+              if line[-1] != ']':
+                  raise ValueError('Found a line starting wih "[" but not ending in "]"!')
+              name = line.lstrip('[').rstrip(']')
+              groups[name] = ODict()
+          # Append normal lines to the last group
+          else:
+              parts = line.split()
+              groups[name][parts[0]] = parts[1:]
+
+      return groups
+#+END_SRC
+
+Parse the lines to a dict.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+import pprint
+pprint.pprint(parse_to_dict(lines))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+OrderedDict([('root', []),
+             ('Grid',
+              OrderedDict([('X1-grid', ['1', '0.4', '256', 'u', '2.5']),
+                           ('X2-grid',
+                            ['1',
+                             '1.0471975511965976',
+                             '72',
+                             'u',
+                             '2.0943951023931953']),
+                           ('X3-grid',
+                            ['1', '0.0', '512', 'u', '6.283185307'])])),
+             ('Chombo Refinement',
+              OrderedDict([('Levels', ['4']),
+                           ('Ref_ratio', ['2', '2', '2', '2', '2']),
+                           ('Regrid_interval', ['2', '2', '2', '2']),
+                           ('Refine_thresh', ['0.3']),
+                           ('Tag_buffer_size', ['3']),
+                           ('Block_factor', ['8']),
+                           ('Max_grid_size', ['64']),
+                           ('Fill_ratio', ['0.75'])])),
+             ('Time',
+              OrderedDict([('CFL', ['0.33']),
+                           ('CFL_max_var', ['1.1']),
+                           ('tstop', ['20.0']),
+                           ('first_dt', ['1.e-4'])])),
+             ('Solver', OrderedDict([('Solver', ['hllc'])])),
+             ('Boundary',
+              OrderedDict([('X1-beg', ['reflective']),
+                           ('X1-end', ['reflective']),
+                           ('X2-beg', ['reflective']),
+                           ('X2-end', ['reflective']),
+                           ('X3-beg', ['periodic']),
+                           ('X3-end', ['periodic'])])),
+             ('Static Grid Output',
+              OrderedDict([('uservar', ['0']),
+                           ('output_dir', ['./out/sim']),
+                           ('dbl', ['1.0', '-200', 'single_file']),
+                           ('flt', ['-1.0', '-1', 'single_file']),
+                           ('vtk', ['-1.0', '-1', 'single_file']),
+                           ('tab', ['-1.0', '-1']),
+                           ('ppm', ['-1.0', '-1']),
+                           ('png', ['-1.0', '-1']),
+                           ('log', ['5']),
+                           ('analysis', ['0.001'])])),
+             ('Chombo HDF5 output',
+              OrderedDict([('Checkpoint_interval', ['-1.0', '0']),
+                           ('Plot_interval', ['1.0', '0'])])),
+             ('Parameters',
+              OrderedDict([('SigmaRef', ['0.000645246309031885']),
+                           ('Mplanet', ['6.e-5']),
+                           ('Pericenter', ['-1.5707963268']),
+                           ('AspectRatio', ['0.1']),
+                           ('ViscosityAlpha', ['0.004']),
+                           ('Inclination', ['50.0']),
+                           ('Rplanet', ['5.2']),
+                           ('Smoothing', ['0.5']),
+                           ('ForceCutoff', ['0.8']),
+                           ('DensityFloor', ['1.e-20']),
+                           ('WDThetaBegRel', ['0.8']),
+                           ('WDRIn', ['0.4']),
+                           ('WDROut', ['2.1'])]))])
+:END:
