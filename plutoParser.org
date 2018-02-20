@@ -167,14 +167,14 @@ Split the lines with and store the first part as key and the rest as values.
 
 Parse the lines to a dict.
 
-#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+#+BEGIN_SRC ipython :session plpar :exports both :results output
 import pprint
 cfg_dict, stats = parse_to_dict(lines)
 pprint.pprint(cfg_dict)
 #+END_SRC
 
 #+RESULTS:
-:RESULTS:
+#+begin_example
 OrderedDict([('_root', []),
              ('Grid',
               OrderedDict([('X1-grid', ['1', '0.4', '256', 'u', '2.5']),
@@ -236,14 +236,14 @@ OrderedDict([('_root', []),
                            ('WDThetaBegRel', ['0.8']),
                            ('WDRIn', ['0.4']),
                            ('WDROut', ['2.1'])]))])
-:END:
+#+end_example
 
 ** Write the dict back to strings
 
 + leave blank lines between header lines and the key value pair lines.
 + no blank line at the beginning
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
   def parse_dict_to_str(dct, stats=None):
       lines = []
       for group in dct:
@@ -269,13 +269,13 @@ OrderedDict([('_root', []),
 
 Test the output
 
-#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+#+BEGIN_SRC ipython :session plpar :exports both :results output
   for line in parse_dict_to_str(cfg_dict, stats):
       print(line)
 #+END_SRC
 
 #+RESULTS:
-:RESULTS:
+#+begin_example
 [Grid]
 
 X1-grid   1   0.4                  256   u   2.5
