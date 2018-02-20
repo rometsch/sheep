@@ -57,13 +57,13 @@ ViscosityAlpha   0.004
 A sample config is available at =samples/plutoSetup/pluto.ini=.
 
 
-* Code
+* Parser Code
 
 ** Imports
 
 Import libraries
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
 import os
 from collections import OrderedDict as ODict
 #+END_SRC
