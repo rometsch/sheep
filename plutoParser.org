@@ -132,7 +132,7 @@ Print the lines
 ['[Parameters]', 'SigmaRef\t\t\t0.000645246309031885', 'Mplanet\t\t\t\t6.e-5', 'Pericenter          -1.5707963268', 'AspectRatio\t\t\t0.1', 'ViscosityAlpha\t\t0.004', 'Inclination\t\t\t50.0', 'Rplanet\t\t\t\t5.2', 'Smoothing\t\t\t0.5', 'ForceCutoff\t\t\t0.8', 'DensityFloor\t\t1.e-20', 'WDThetaBegRel\t\t0.8', 'WDRIn\t\t\t\t0.4', 'WDROut\t\t\t\t2.1']
 :END:
 
-** Parse groups to
+** Parse groups to dicts
 
 Now parse the lines into ordered dicts.
 Split the lines with and store the first part as key and the rest as values.
@@ -141,9 +141,11 @@ Split the lines with and store the first part as key and the rest as values.
   def parse_to_dict(lines):
       # Initialize a first group to store key value pairs listed before the first group.
       groups = ODict()
-      name = 'root'
+      stats = ODict()
+      name = '_root'
       groups[name] = []
       for line in lines:
+          line = line.strip()
           # Skip empty lines
           if line == "":
               continue
@@ -153,24 +155,29 @@ Split the lines with and store the first part as key and the rest as values.
                   raise ValueError('Found a line starting wih "[" but not ending in "]"!')
               name = line.lstrip('[').rstrip(']')
               groups[name] = ODict()
+              stats[name] = [0, 0]
           # Append normal lines to the last group
           else:
               parts = line.split()
               groups[name][parts[0]] = parts[1:]
+              stats[name] += [0]*(len(parts) - len(stats[name]))
+              for n,p in enumerate(parts):
+                  stats[name][n] = max(stats[name][n], len(p))
 
-      return groups
+      return (groups, stats)
 #+END_SRC
 
 Parse the lines to a dict.
 
 #+BEGIN_SRC ipython :session plpar :exports both :results output drawer
 import pprint
-pprint.pprint(parse_to_dict(lines))
+cfg_dict, stats = parse_to_dict(lines)
+pprint.pprint(cfg_dict)
 #+END_SRC
 
 #+RESULTS:
 :RESULTS:
-OrderedDict([('root', []),
+OrderedDict([('_root', []),
              ('Grid',
               OrderedDict([('X1-grid', ['1', '0.4', '256', 'u', '2.5']),
                            ('X2-grid',
@@ -231,4 +238,114 @@ OrderedDict([('root', []),
                            ('WDThetaBegRel', ['0.8']),
                            ('WDRIn', ['0.4']),
                            ('WDROut', ['2.1'])]))])
+:END:
+
+** Write the dict back to strings
+
++ leave blank lines between header lines and the key value pair lines.
++ no blank line at the beginning
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  def parse_dict_to_str(dct, stats=None):
+      lines = []
+      for group in dct:
+          # blank line before the group header
+          if len(lines) > 0:
+              lines.append('')
+          # Write the header if group is not the root.
+          if group != '_root':
+              lines.append('[{}]'.format(group))
+              lines.append('')
+          # Write the key value pairs
+          for key in dct[group]:
+              if stats is None:
+                  lines.append('{}   {}'.format( key, '   '.join(dct[group][key])  ))
+              else:
+                  st = stats[group]
+                  line = format(key, '{}s'.format(st[0]))
+                  for n, val in enumerate(dct[group][key]):
+                      line += '   ' + format(val, '{}s'.format(st[n+1]))
+                  lines.append(line)
+      return lines
+#+END_SRC
+
+Test the output
+
+#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+  for line in parse_dict_to_str(cfg_dict, stats):
+      print(line)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+[Grid]
+
+X1-grid   1   0.4                  256   u   2.5
+X2-grid   1   1.0471975511965976   72    u   2.0943951023931953
+X3-grid   1   0.0                  512   u   6.283185307
+
+[Chombo Refinement]
+
+Levels            4
+Ref_ratio         2      2   2   2   2
+Regrid_interval   2      2   2   2
+Refine_thresh     0.3
+Tag_buffer_size   3
+Block_factor      8
+Max_grid_size     64
+Fill_ratio        0.75
+
+[Time]
+
+CFL           0.33
+CFL_max_var   1.1
+tstop         20.0
+first_dt      1.e-4
+
+[Solver]
+
+Solver   hllc
+
+[Boundary]
+
+X1-beg   reflective
+X1-end   reflective
+X2-beg   reflective
+X2-end   reflective
+X3-beg   periodic
+X3-end   periodic
+
+[Static Grid Output]
+
+uservar      0
+output_dir   ./out/sim
+dbl          1.0         -200   single_file
+flt          -1.0        -1     single_file
+vtk          -1.0        -1     single_file
+tab          -1.0        -1
+ppm          -1.0        -1
+png          -1.0        -1
+log          5
+analysis     0.001
+
+[Chombo HDF5 output]
+
+Checkpoint_interval   -1.0   0
+Plot_interval         1.0    0
+
+[Parameters]
+
+SigmaRef         0.000645246309031885
+Mplanet          6.e-5
+Pericenter       -1.5707963268
+AspectRatio      0.1
+ViscosityAlpha   0.004
+Inclination      50.0
+Rplanet          5.2
+Smoothing        0.5
+ForceCutoff      0.8
+DensityFloor     1.e-20
+WDThetaBegRel    0.8
+WDRIn            0.4
+WDROut           2.1
 :END:
