@@ -114,30 +114,28 @@ Also make sure that the last character is a =]= and raise an exception if its mi
 #+END_SRC
 
 Print the lines
-#+BEGIN_SRC ipython :session plpar :exports both :results output drawer
+#+BEGIN_SRC ipython :session plpar :exports both :results output
   for group in parse_to_grouped_lines(lines):
       print(group)
 #+END_SRC
 
 #+RESULTS:
-:RESULTS:
-[]
-['[Grid]', 'X1-grid    1    0.4            256    u    2.5', 'X2-grid   1   1.0471975511965976   72   u   2.0943951023931953', 'X3-grid    1    0.0            512    u    6.283185307']
-['[Chombo Refinement]', 'Levels           4', 'Ref_ratio        2 2 2 2 2', 'Regrid_interval  2 2 2 2', 'Refine_thresh    0.3', 'Tag_buffer_size  3', 'Block_factor     8', 'Max_grid_size    64', 'Fill_ratio       0.75']
-['[Time]', 'CFL              0.33', 'CFL_max_var      1.1', 'tstop            20.0', 'first_dt         1.e-4']
-['[Solver]', 'Solver         hllc']
-['[Boundary]', 'X1-beg\t      reflective', 'X1-end        reflective', 'X2-beg        reflective', 'X2-end        reflective', 'X3-beg        periodic', 'X3-end        periodic']
-['[Static Grid Output]', 'uservar    0', 'output_dir ./out/sim', 'dbl       1.0  -200   single_file', 'flt       -1.0  -1   single_file', 'vtk       -1.0 -1   single_file', 'tab       -1.0  -1', 'ppm       -1.0  -1', 'png       -1.0  -1', 'log        5', 'analysis  0.001']
-['[Chombo HDF5 output]', 'Checkpoint_interval  -1.0  0', 'Plot_interval         1.0  0']
-['[Parameters]', 'SigmaRef\t\t\t0.000645246309031885', 'Mplanet\t\t\t\t6.e-5', 'Pericenter          -1.5707963268', 'AspectRatio\t\t\t0.1', 'ViscosityAlpha\t\t0.004', 'Inclination\t\t\t50.0', 'Rplanet\t\t\t\t5.2', 'Smoothing\t\t\t0.5', 'ForceCutoff\t\t\t0.8', 'DensityFloor\t\t1.e-20', 'WDThetaBegRel\t\t0.8', 'WDRIn\t\t\t\t0.4', 'WDROut\t\t\t\t2.1']
-:END:
+: []
+: ['[Grid]', 'X1-grid    1    0.4            256    u    2.5', 'X2-grid   1   1.0471975511965976   72   u   2.0943951023931953', 'X3-grid    1    0.0            512    u    6.283185307']
+: ['[Chombo Refinement]', 'Levels           4', 'Ref_ratio        2 2 2 2 2', 'Regrid_interval  2 2 2 2', 'Refine_thresh    0.3', 'Tag_buffer_size  3', 'Block_factor     8', 'Max_grid_size    64', 'Fill_ratio       0.75']
+: ['[Time]', 'CFL              0.33', 'CFL_max_var      1.1', 'tstop            20.0', 'first_dt         1.e-4']
+: ['[Solver]', 'Solver         hllc']
+: ['[Boundary]', 'X1-beg\t      reflective', 'X1-end        reflective', 'X2-beg        reflective', 'X2-end        reflective', 'X3-beg        periodic', 'X3-end        periodic']
+: ['[Static Grid Output]', 'uservar    0', 'output_dir ./out/sim', 'dbl       1.0  -200   single_file', 'flt       -1.0  -1   single_file', 'vtk       -1.0 -1   single_file', 'tab       -1.0  -1', 'ppm       -1.0  -1', 'png       -1.0  -1', 'log        5', 'analysis  0.001']
+: ['[Chombo HDF5 output]', 'Checkpoint_interval  -1.0  0', 'Plot_interval         1.0  0']
+: ['[Parameters]', 'SigmaRef\t\t\t0.000645246309031885', 'Mplanet\t\t\t\t6.e-5', 'Pericenter          -1.5707963268', 'AspectRatio\t\t\t0.1', 'ViscosityAlpha\t\t0.004', 'Inclination\t\t\t50.0', 'Rplanet\t\t\t\t5.2', 'Smoothing\t\t\t0.5', 'ForceCutoff\t\t\t0.8', 'DensityFloor\t\t1.e-20', 'WDThetaBegRel\t\t0.8', 'WDRIn\t\t\t\t0.4', 'WDROut\t\t\t\t2.1']
 
 ** Parse groups to dicts
 
 Now parse the lines into ordered dicts.
 Split the lines with and store the first part as key and the rest as values.
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
   def parse_to_dict(lines):
       # Initialize a first group to store key value pairs listed before the first group.
       groups = ODict()
