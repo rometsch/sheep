@@ -529,3 +529,13 @@ Cached error: Could not find start.py which is a mandatory script when using she
 :RESULTS:
 Cached error: Setting the parameter foo is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.
 :END:
+* ParamSet
+
+To manage the interaction with different parameter files it is useful to
+have an abstract interface.
+This is the purpose of =ParamSet=.
+
+** Features
+
+1. provide a common =set_param()= function
+2.
