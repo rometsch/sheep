@@ -288,6 +288,7 @@ Define a copy function that copies both, files and directories.
               self.parameters[parts[0]] = parts[1:]
 
       def get_temp_path(self, filename ):
+          """ Return the absolute path of the file *filename* inside the temp dir. """
           return os.path.join( self.temp_dir, filename)
 
       def list_temp_dir(self):
