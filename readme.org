@@ -52,7 +52,9 @@ This is where =sheep= comes in.
 4. support the usage of setups
 5. check that parameters are reasonable by specifying simple rules (e.g. boundaries on the value)
 
-* Implementation
+
+* Sheep
+** Implementation
 
 Here is an outline of the steps =sheep= needs to be able to do.
 Generic steps which are the same for avery code are marked by =(g)=.
@@ -76,9 +78,9 @@ Note that, as a design choice, parameters can only be set if they are
 + defined in the setup specific config
 which is to avoid typo when setting the parameters automatically.
 
-* Functions to be provided by =sheep=
+** Functions to be provided by =sheep=
 
-** =set_param( name, value )= =(g)=
+*** =set_param( name, value )= =(g)=
 
 The function to set parameters should be of the form
 
@@ -88,7 +90,7 @@ The function to set parameters should be of the form
 Depending on the parameter, an appropriate code specific function is called.
 Therefore, there must be an entry in the file =parameters.txt=
 
-** =translate_param_name( to_convention, name )= =(g)=
+*** =translate_param_name( to_convention, name )= =(g)=
 
 Translate the parameter with =name= to the naming =to_convention=.
 
@@ -98,7 +100,7 @@ To go the other way around and translate from the parameter with name 'FoO' from
 
 The translation dictionaries need to be provided by the code specific implementation in a file called =parameters.txt=.
 
-** =enforce_scripts_available()= =(g)=
+*** =enforce_scripts_available()= =(g)=
 
 This functions checks for the scripts
 + =start.py=
@@ -108,27 +110,27 @@ which are supposed to be copied to the root of the temporary directory.
 The function of these scripts is not checked, however.
 Its the responsibility of the user to make them work properly.
 
-** =provide_temp_dir()= =(g)=
+*** =provide_temp_dir()= =(g)=
 
 This function provides a temporary directory.
 The path is written into an object variable.
 
-** =copy_src()= =(s)=
+*** =copy_src()= =(s)=
 
 Copy the source files from a pre-defined directory to the temp directory for editing.
 The source files/folders need to be specified in =sources.txt=.
 
-** =load_param_file( filepath )= =(g), (s)=
+*** =load_param_file( filepath )= =(g), (s)=
 
 Loads the parameter file at =filepath= into memory.
 Automatically determine the syntax from the context.
 
-** =save_param_file( filepath )= =(g), (s)=
+*** =save_param_file( filepath )= =(g), (s)=
 
 Saves the parameter file from the memory to =filepath=.
 Automatically determine the syntax from the context.
 
-* Configuration
+** Configuration
 
 The configuration of =sheep= is accomplished using simple tab separated plain text files.
 Comments in the configuration files can be done using the =#= character.
@@ -148,7 +150,7 @@ The directory structure of a setup could thus be
   + parameters.txt  # parameter names and locations
 #+END_EXAMPLE
 
-** The =parameters.txt= file.
+*** The =parameters.txt= file.
 
 This is the place where the parameters of a specific code are listed.
 For every parameter, there must be a line defining the necessary information
@@ -173,7 +175,7 @@ AspectRatio	h_asp	code_params.txt	# different names
 Each implementation of the class =Sheep= must define how to read and write
 parameters to a parameter file when given its filename.
 
-* Code
+** Code
 
 Import libraries
 
@@ -329,9 +331,9 @@ Define a copy function that copies both, files and directories.
 # Out[172]:
 :END:
 
-* Tests
+** Tests
 
-** temp dir creation
+*** temp dir creation
 
 #+BEGIN_SRC ipython :session sheep :results output drawer
   s = Sheep()
@@ -348,7 +350,7 @@ Define a copy function that copies both, files and directories.
 foo
 :END:
 
-** text file to line list parser
+*** text file to line list parser
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   tmpdir = tempfile.TemporaryDirectory()
@@ -367,7 +369,7 @@ foo
 ['some important data', 'data with']
 :END:
 
-** copy function
+*** copy function
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
     # Create a temp folder to work in
@@ -394,7 +396,7 @@ foo
 ['testdir', 'test.txt']
 :END:
 
-** get a uuid
+*** get a uuid
 
 #+BEGIN_SRC ipython :session :exports both :results output drawer
 import uuid
@@ -405,7 +407,7 @@ print(str(uuid.uuid4()))
 :RESULTS:
 0256843e-4b64-459e-b021-f97868677813
 :END:
-** copy src folder and make a tar
+*** copy src folder and make a tar
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
 s = Sheep()
@@ -457,7 +459,7 @@ os.listdir( move_to_dir)
 # Out[128]:
 : ['sheeps_tmp_content.tgz']
 :END:
-** test the config file parsers
+*** test the config file parsers
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
 s = Sheep('sampleconfig')
@@ -470,7 +472,7 @@ print(s.src_list)
 {'DiskMass': ['Mdisk', '0.1'], 'Rstar': ['Rstar', '1.e-5']}
 ['readme.org']
 :END:
-** Trigger errors for missing config files
+*** Trigger errors for missing config files
 
 There should be some sample config files.
 
@@ -483,7 +485,7 @@ There should be some sample config files.
 parameters.txt	sources.txt
 :END:
 
-*** Missing config
+**** Missing config
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   try:
@@ -497,7 +499,7 @@ parameters.txt	sources.txt
 [Errno 2] No such file or directory: 'sheep/sources.txt'
 :END:
 
-*** Missing mandatory script file
+**** Missing mandatory script file
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   s = Sheep('samples', 'config')
@@ -512,7 +514,7 @@ parameters.txt	sources.txt
 Cached error: Could not find start.py which is a mandatory script when using sheep!
 :END:
 
-*** Param not known
+**** Param not known
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output drawer
   s = Sheep('samples', 'config')
