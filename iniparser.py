@@ -55,11 +55,10 @@ def parse_dict_to_str(dct, stats=None):
 class IniParser:
 
     def __init__(self, inifile):
-        self.inifile = inifile
-        self.parse_file_to_dict()
-        self.make_parameter_lookup_dict()
+        self.inifile = os.path.abspath(inifile)
+        self.load()
 
-    def parse_file_to_dict(self):
+    def load(self):
         """ Load the ini file into memory. """
         with open(self.inifile, 'r') as rf:
             self.cfg_dct, self.stats = parse_to_dict(rf)
@@ -68,5 +67,13 @@ class IniParser:
         """ Write the dict into lines. """
         return parse_dict_to_str(self.cfg_dct, self.stats)
 
-    def make_parameter_lookup_dict(self):
-        self.parameter_lookup_dict = parameter_lookup_dict(self.cfg_dct)
+    def save(self, path=None):
+        """ Write the config back to the file by default or to any file specified by *path*. """
+        if path is None:
+            path = self.inifile
+        with open(path, 'w') as of:
+            of.write('\n'.join(self.parse_dict_to_str()))
+
+    def get_param_dict(self):
+        """ Return the parameter dict. """
+        return self.cfg_dct
