@@ -53,7 +53,6 @@ This is where =sheep= comes in.
 4. support the usage of setups
 5. check that parameters are reasonable by specifying simple rules (e.g. boundaries on the value)
 
-
 * Sheep
 ** Implementation
 
@@ -178,6 +177,8 @@ parameters to a parameter file when given its filename.
 
 ** Code
 
+*** Imports
+
 Import libraries
 
 #+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
@@ -188,6 +189,10 @@ import uuid
 import tarfile
 #+END_SRC
 
+*** Utility functions
+
+**** Expandings paths
+
 Define a function to expand pathes with user variables and the ~ shorthand.
 
 #+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
@@ -196,6 +201,8 @@ Define a function to expand pathes with user variables and the ~ shorthand.
       path = os.path.expandvars(path)
       return path
 #+END_SRC
+
+**** Parse textfiles to lines
 
 Define a function to parse a textfile and remove empty lines and text after #.
 
@@ -216,6 +223,8 @@ Define a function to parse a textfile and remove empty lines and text after #.
       return lines
 #+END_SRC
 
+**** Copy function for files and directories
+
 Define a copy function that copies both, files and directories.
 
 #+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep.py
@@ -230,6 +239,8 @@ Define a copy function that copies both, files and directories.
           except FileExistsError:
               shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
 #+END_SRC
+
+*** =Sheep= class
 
 #+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep.py
   class Sheep:
@@ -330,7 +341,7 @@ Define a copy function that copies both, files and directories.
 
 #+RESULTS:
 :RESULTS:
-# Out[172]:
+# Out[6]:
 :END:
 
 ** Tests
@@ -532,6 +543,8 @@ Cached error: Setting the parameter foo is not allowed. Make sure it is spelled 
 :END:
 * ParamSet
 
+** Description
+
 To manage the interaction with different parameter files it is useful to
 have an abstract interface.
 This is the purpose of =ParamSet=.
@@ -539,4 +552,624 @@ This is the purpose of =ParamSet=.
 ** Features
 
 1. provide a common =set_param()= function
-2.
+2. act as a meta parameter set which holds different param sets for every config file
+3. using the sheep config, decide into which param set/config file a parameter is written
+
+** Implementation
+
+*** purely abstracted from files and syntax
+
+Do not bother with file access and ini file syntax or structure.
+Implement special parsers for every type of parameter file.
+
+*** minimize interaction with parsers
+
+Only interact with parser by requesting the parameter dict.
+A parser to be used with =ParamSet= should have a =get_param_dict()= function
+which returns a hirarchical presentation of the parameters in form of a =Dict=.
+Changes to the parameters should be made in this dict.
+
+*** structure of parameter dicts
+
+The structure of the parameter dicts is as follows.
+
++ key-value pairs are stored directly in the dict
++ values are always stored in a list, which might have multiple entries
++ if the parameters are grouped, add a group by using its name as the key
+  and a dict of the group key-value pairs as value (do not use a list in this case)
+
+** Code
+
+*** imports
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle paramset.py
+import os
+from collections import OrderedDict as ODict
+#+END_SRC
+
+*** parameter lookup table
+
+There could be the case that two parameters in different blocks have the same name.
+For the situation here, astrophysical simulations, this is probably a bad idea
+anyways, but better be safe than sorry.
+
+Build a dict of parameters containing the group of the parameter.
+Put the group in a list and simply append a possible additional group names.
+This makes it easy to handle collisions and at the same time makes finding the
+parameters easy.
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+
+  def parameter_lookup_dict(dct):
+      """ Make a dict to lookup where a given parameter is stored. """
+      lt = ODict()
+      for group in dct:
+          for key in dct[group]:
+              if key in lt:
+                  lt[key].append(group)
+              else:
+                  lt[key] = [group]
+      # Finally add the key itself at the end
+      for key in lt:
+          lt[key].append(key)
+      return lt
+#+END_SRC
+
+*** helpers to work on nested dicts
+
+Use strategy from this [[https://stackoverflow.com/questions/14692690/access-nested-dictionary-items-via-a-list-of-keys][stackoverflow thread]] to handle accessing nested dicts
+with lists of keys.
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+from functools import reduce
+import operator
+
+def getFromDict(dataDict, mapList):
+    return reduce(operator.getitem, mapList, dataDict)
+
+def setInDict(dataDict, mapList, value):
+    getFromDict(dataDict, mapList[:-1])[mapList[-1]] = value
+#+END_SRC
+
+*** the class
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+  class ParamSet:
+
+      def __init__(self, parser = None):
+          if parser is None:
+              raise RuntimeError("Need to initialize with a parameter file parser!")
+          self.parser = parser
+          self.dct = parser.get_param_dict()
+          self.make_parameter_lookup_dict()
+
+      def make_parameter_lookup_dict(self):
+          """ Construct a dict to map names of parameters to a list of
+          keys to find them in the dict """
+          self.parameter_lookup_dict = parameter_lookup_dict(self.dct)
+
+      def set_param(self, param, value):
+          """ Set the parameter param to its new value. """
+          # Parsers hold values inside of lists to handle
+          # multiple values per param.
+          if isinstance(value, str):
+              value = [value]
+          # make a string out of anything else if it doesn't have a length
+          try:
+              len(value)
+          except TypeError:
+              value = ["".format(value)]
+          keyList = self.parameter_lookup_dict[param]
+          setInDict(self.dct, keyList, value)
+
+      def get_param(self, param):
+          """ Get the parameter param. """
+          keyList = self.parameter_lookup_dict[param]
+          value = getFromDict(self.dct, keyList)
+          # Parsers hold values inside of lists to handle
+          # multiple values per param.
+          if len(value) == 1:
+              return value[0]
+          else:
+              return value
+
+
+#+END_SRC
+
+** Test the code
+
+*** get a dict from a parser
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output
+  import iniparser
+  import pprint
+  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  pset = ParamSet(par)
+  pprint.pprint(pset.parameter_lookup_dict)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+OrderedDict([('X1-grid', ['Grid', 'X1-grid']),
+             ('X2-grid', ['Grid', 'X2-grid']),
+             ('X3-grid', ['Grid', 'X3-grid']),
+             ('Levels', ['Chombo Refinement', 'Levels']),
+             ('Ref_ratio', ['Chombo Refinement', 'Ref_ratio']),
+             ('Regrid_interval', ['Chombo Refinement', 'Regrid_interval']),
+             ('Refine_thresh', ['Chombo Refinement', 'Refine_thresh']),
+             ('Tag_buffer_size', ['Chombo Refinement', 'Tag_buffer_size']),
+             ('Block_factor', ['Chombo Refinement', 'Block_factor']),
+             ('Max_grid_size', ['Chombo Refinement', 'Max_grid_size']),
+             ('Fill_ratio', ['Chombo Refinement', 'Fill_ratio']),
+             ('CFL', ['Time', 'CFL']),
+             ('CFL_max_var', ['Time', 'CFL_max_var']),
+             ('tstop', ['Time', 'tstop']),
+             ('first_dt', ['Time', 'first_dt']),
+             ('Solver', ['Solver', 'Solver']),
+             ('X1-beg', ['Boundary', 'X1-beg']),
+             ('X1-end', ['Boundary', 'X1-end']),
+             ('X2-beg', ['Boundary', 'X2-beg']),
+             ('X2-end', ['Boundary', 'X2-end']),
+             ('X3-beg', ['Boundary', 'X3-beg']),
+             ('X3-end', ['Boundary', 'X3-end']),
+             ('uservar', ['Static Grid Output', 'uservar']),
+             ('output_dir', ['Static Grid Output', 'output_dir']),
+             ('dbl', ['Static Grid Output', 'dbl']),
+             ('flt', ['Static Grid Output', 'flt']),
+             ('vtk', ['Static Grid Output', 'vtk']),
+             ('tab', ['Static Grid Output', 'tab']),
+             ('ppm', ['Static Grid Output', 'ppm']),
+             ('png', ['Static Grid Output', 'png']),
+             ('log', ['Static Grid Output', 'log']),
+             ('analysis', ['Static Grid Output', 'analysis']),
+             ('Checkpoint_interval',
+              ['Chombo HDF5 output', 'Checkpoint_interval']),
+             ('Plot_interval', ['Chombo HDF5 output', 'Plot_interval']),
+             ('SigmaRef', ['Parameters', 'SigmaRef']),
+             ('Mplanet', ['Parameters', 'Mplanet']),
+             ('Pericenter', ['Parameters', 'Pericenter']),
+             ('AspectRatio', ['Parameters', 'AspectRatio']),
+             ('ViscosityAlpha', ['Parameters', 'ViscosityAlpha']),
+             ('Inclination', ['Parameters', 'Inclination']),
+             ('Rplanet', ['Parameters', 'Rplanet']),
+             ('Smoothing', ['Parameters', 'Smoothing']),
+             ('ForceCutoff', ['Parameters', 'ForceCutoff']),
+             ('DensityFloor', ['Parameters', 'DensityFloor']),
+             ('WDThetaBegRel', ['Parameters', 'WDThetaBegRel']),
+             ('WDRIn', ['Parameters', 'WDRIn']),
+             ('WDROut', ['Parameters', 'WDROut'])])
+#+end_example
+
+*** change a param in a parser
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output
+  import iniparser
+  import pprint
+  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  pset = ParamSet(par)
+  pset.set_param('tstop', '40.0')
+  print(pset.get_param('tstop'))
+#+END_SRC
+
+#+RESULTS:
+: 40.0
+
+
+*** write a changed param back to file
+
+#+BEGIN_SRC ipython :session sheep :exports both :results output
+  import iniparser
+  import pprint
+  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  pset = ParamSet(par)
+  pset.set_param('tstop', '40.0')
+  par.save('samples/plutoSetup/pluto_testwrite.ini')
+  par2 = iniparser.IniParser('samples/plutoSetup/pluto_testwrite.ini')
+  print(par2.get_param_dict()['Time']['tstop'])
+#+END_SRC
+
+#+RESULTS:
+: ['40.0']
+
+
+
+
+
+* Parsers
+
+This section contains the parsers for different parameter files.
+
+** ini file parser for PLUTO
+
+*** Introduction
+
+This document is a development file for an implemenation of a parser for
+runtime config files of the PLUTO astrophysics code.
+
+*** Features
+
+**** DONE ini file to memory
+
++ load the ini file and parse it into an ordered dictionary
++ the root dict contains all dicts of groups
++ the dicts for groups are also ordered and have lists to store the values
+
+**** DONE Save the config dict to file
+
++ parse the config dict into lines using some rule to format the white spaces
+  (why not make the file pretty if we parse it anyways)
++ save the generated lines to a file, possibly the same as the source file
+
+**** TODO Replace parameters
+
++ replace the values of parameters at arbitrary positions.
++ support only naming the parameter without the group
++ raise exceptions upon name collision
++ support specifying the group as optional parameter
+
+*** Syntax
+
+The syntax is probably identical to the one of Microsoft ini files.
+There is support for different groups, which are indicated by =[]=.
+Key value pairs are white-space separated and there might be multiple values.
+
+An example ilustrated the syntax. It is taken from a 3D PLUTO setup and
+configures the grid and some parameters.
+
+#+BEGIN_EXAMPLE
+[Grid]
+
+X1-grid    1    0.4   256   u    2.5
+X2-grid    1   -0.3   72    u    0.3
+X3-grid    1    0.0   512   u    6.283185307
+
+...
+
+[Parameters]
+
+Mplanet          6.e-5
+AspectRatio      0.1
+ViscosityAlpha   0.004
+#+END_EXAMPLE
+
+*** Sample config
+
+A sample config is available at =samples/plutoSetup/pluto.ini=.
+
+*** Parser Code
+
+**** Imports
+
+Import libraries
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+import os
+from collections import OrderedDict as ODict
+#+END_SRC
+
+**** Loading the ini file
+
+Load the file into lines
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  lines = []
+  with open('samples/plutoSetup/pluto.ini', 'r') as cf:
+      for line in cf:
+          lines.append(line.strip())
+#+END_SRC
+
+inspect the lines in a different buffer.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+print(lines)
+#+END_SRC
+
+The output looks as expected and shows that there are also some tabs as white space characters.
+
+**** Parse groups to lists
+
+Now go through the lines and extract groups.
+Write all lines after a line which indicates a group to a separate list.
+These are lines having a =[= as their first character.
+Also make sure that the last character is a =]= and raise an exception if its missing.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results raw drawer
+  def parse_to_grouped_lines(lines):
+      # Initialize a first group to store key value pairs listed before the first group.
+      grouped_lines = [[]]
+      for line in lines:
+          # Skip empty lines
+          if line == "":
+              continue
+          # Identiy a header line
+          if line[0] == '[':
+              if line[-1] != ']':
+                  raise ValueError('Found a line starting wih "[" but not ending in "]"!')
+              grouped_lines.append([line])
+          # Append normal lines to the last group
+          else:
+              grouped_lines[-1].append(line)
+      return grouped_lines
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[3]:
+:END:
+
+Print the lines
+#+BEGIN_SRC ipython :session plpar :exports both :results output
+  for group in parse_to_grouped_lines(lines):
+      print(group)
+#+END_SRC
+
+#+RESULTS:
+: []
+: ['[Grid]', 'X1-grid    1    0.4            256    u    2.5', 'X2-grid   1   1.0471975511965976   72   u   2.0943951023931953', 'X3-grid    1    0.0            512    u    6.283185307']
+: ['[Chombo Refinement]', 'Levels           4', 'Ref_ratio        2 2 2 2 2', 'Regrid_interval  2 2 2 2', 'Refine_thresh    0.3', 'Tag_buffer_size  3', 'Block_factor     8', 'Max_grid_size    64', 'Fill_ratio       0.75']
+: ['[Time]', 'CFL              0.33', 'CFL_max_var      1.1', 'tstop            20.0', 'first_dt         1.e-4']
+: ['[Solver]', 'Solver         hllc']
+: ['[Boundary]', 'X1-beg\t      reflective', 'X1-end        reflective', 'X2-beg        reflective', 'X2-end        reflective', 'X3-beg        periodic', 'X3-end        periodic']
+: ['[Static Grid Output]', 'uservar    0', 'output_dir ./out/sim', 'dbl       1.0  -200   single_file', 'flt       -1.0  -1   single_file', 'vtk       -1.0 -1   single_file', 'tab       -1.0  -1', 'ppm       -1.0  -1', 'png       -1.0  -1', 'log        5', 'analysis  0.001']
+: ['[Chombo HDF5 output]', 'Checkpoint_interval  -1.0  0', 'Plot_interval         1.0  0']
+: ['[Parameters]', 'SigmaRef\t\t\t0.000645246309031885', 'Mplanet\t\t\t\t6.e-5', 'Pericenter          -1.5707963268', 'AspectRatio\t\t\t0.1', 'ViscosityAlpha\t\t0.004', 'Inclination\t\t\t50.0', 'Rplanet\t\t\t\t5.2', 'Smoothing\t\t\t0.5', 'ForceCutoff\t\t\t0.8', 'DensityFloor\t\t1.e-20', 'WDThetaBegRel\t\t0.8', 'WDRIn\t\t\t\t0.4', 'WDROut\t\t\t\t2.1']
+
+**** Parse groups to dicts
+
+Now parse the lines into ordered dicts.
+Split the lines with and store the first part as key and the rest as values.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+  def parse_to_dict(lines):
+      # Initialize a first group to store key value pairs listed before the first group.
+      groups = ODict()
+      stats = ODict()
+      name = '_root'
+      groups[name] = []
+      for line in lines:
+          line = line.strip()
+          # Skip empty lines
+          if line == "":
+              continue
+          # Identiy a header line
+          if line[0] == '[':
+              if line[-1] != ']':
+                  raise ValueError('Found a line starting wih "[" but not ending in "]"!')
+              name = line.lstrip('[').rstrip(']')
+              groups[name] = ODict()
+              stats[name] = [0, 0]
+          # Append normal lines to the last group
+          else:
+              parts = line.split()
+              groups[name][parts[0]] = parts[1:]
+              stats[name] += [0]*(len(parts) - len(stats[name]))
+              for n,p in enumerate(parts):
+                  stats[name][n] = max(stats[name][n], len(p))
+
+      return (groups, stats)
+#+END_SRC
+
+Parse the lines to a dict.
+
+#+BEGIN_SRC ipython :session plpar :exports both :results output
+import pprint
+cfg_dict, stats = parse_to_dict(lines)
+pprint.pprint(cfg_dict)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+OrderedDict([('_root', []),
+             ('Grid',
+              OrderedDict([('X1-grid', ['1', '0.4', '256', 'u', '2.5']),
+                           ('X2-grid',
+                            ['1',
+                             '1.0471975511965976',
+                             '72',
+                             'u',
+                             '2.0943951023931953']),
+                           ('X3-grid',
+                            ['1', '0.0', '512', 'u', '6.283185307'])])),
+             ('Chombo Refinement',
+              OrderedDict([('Levels', ['4']),
+                           ('Ref_ratio', ['2', '2', '2', '2', '2']),
+                           ('Regrid_interval', ['2', '2', '2', '2']),
+                           ('Refine_thresh', ['0.3']),
+                           ('Tag_buffer_size', ['3']),
+                           ('Block_factor', ['8']),
+                           ('Max_grid_size', ['64']),
+                           ('Fill_ratio', ['0.75'])])),
+             ('Time',
+              OrderedDict([('CFL', ['0.33']),
+                           ('CFL_max_var', ['1.1']),
+                           ('tstop', ['20.0']),
+                           ('first_dt', ['1.e-4'])])),
+             ('Solver', OrderedDict([('Solver', ['hllc'])])),
+             ('Boundary',
+              OrderedDict([('X1-beg', ['reflective']),
+                           ('X1-end', ['reflective']),
+                           ('X2-beg', ['reflective']),
+                           ('X2-end', ['reflective']),
+                           ('X3-beg', ['periodic']),
+                           ('X3-end', ['periodic'])])),
+             ('Static Grid Output',
+              OrderedDict([('uservar', ['0']),
+                           ('output_dir', ['./out/sim']),
+                           ('dbl', ['1.0', '-200', 'single_file']),
+                           ('flt', ['-1.0', '-1', 'single_file']),
+                           ('vtk', ['-1.0', '-1', 'single_file']),
+                           ('tab', ['-1.0', '-1']),
+                           ('ppm', ['-1.0', '-1']),
+                           ('png', ['-1.0', '-1']),
+                           ('log', ['5']),
+                           ('analysis', ['0.001'])])),
+             ('Chombo HDF5 output',
+              OrderedDict([('Checkpoint_interval', ['-1.0', '0']),
+                           ('Plot_interval', ['1.0', '0'])])),
+             ('Parameters',
+              OrderedDict([('SigmaRef', ['0.000645246309031885']),
+                           ('Mplanet', ['6.e-5']),
+                           ('Pericenter', ['-1.5707963268']),
+                           ('AspectRatio', ['0.1']),
+                           ('ViscosityAlpha', ['0.004']),
+                           ('Inclination', ['50.0']),
+                           ('Rplanet', ['5.2']),
+                           ('Smoothing', ['0.5']),
+                           ('ForceCutoff', ['0.8']),
+                           ('DensityFloor', ['1.e-20']),
+                           ('WDThetaBegRel', ['0.8']),
+                           ('WDRIn', ['0.4']),
+                           ('WDROut', ['2.1'])]))])
+#+end_example
+
+**** Write the dict back to strings
+
++ leave blank lines between header lines and the key value pair lines.
++ no blank line at the beginning
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+  def parse_dict_to_str(dct, stats=None):
+      lines = []
+      for group in dct:
+          # blank line before the group header
+          if len(lines) > 0:
+              lines.append('')
+          # Write the header if group is not the root.
+          if group != '_root':
+              lines.append('[{}]'.format(group))
+              lines.append('')
+          # Write the key value pairs
+          for key in dct[group]:
+              if stats is None:
+                  lines.append('{}   {}'.format( key, '   '.join(dct[group][key])  ))
+              else:
+                  st = stats[group]
+                  line = format(key, '{}s'.format(st[0]))
+                  for n, val in enumerate(dct[group][key]):
+                      line += '   ' + format(val, '{}s'.format(st[n+1]))
+                  lines.append(line)
+      return lines
+#+END_SRC
+
+Test the output
+
+#+BEGIN_SRC ipython :session plpar :exports both :results output
+  for line in parse_dict_to_str(cfg_dict, stats):
+      print(line)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+[Grid]
+
+X1-grid   1   0.4                  256   u   2.5
+X2-grid   1   1.0471975511965976   72    u   2.0943951023931953
+X3-grid   1   0.0                  512   u   6.283185307
+
+[Chombo Refinement]
+
+Levels            4
+Ref_ratio         2      2   2   2   2
+Regrid_interval   2      2   2   2
+Refine_thresh     0.3
+Tag_buffer_size   3
+Block_factor      8
+Max_grid_size     64
+Fill_ratio        0.75
+
+[Time]
+
+CFL           0.33
+CFL_max_var   1.1
+tstop         20.0
+first_dt      1.e-4
+
+[Solver]
+
+Solver   hllc
+
+[Boundary]
+
+X1-beg   reflective
+X1-end   reflective
+X2-beg   reflective
+X2-end   reflective
+X3-beg   periodic
+X3-end   periodic
+
+[Static Grid Output]
+
+uservar      0
+output_dir   ./out/sim
+dbl          1.0         -200   single_file
+flt          -1.0        -1     single_file
+vtk          -1.0        -1     single_file
+tab          -1.0        -1
+ppm          -1.0        -1
+png          -1.0        -1
+log          5
+analysis     0.001
+
+[Chombo HDF5 output]
+
+Checkpoint_interval   -1.0   0
+Plot_interval         1.0    0
+
+[Parameters]
+
+SigmaRef         0.000645246309031885
+Mplanet          6.e-5
+Pericenter       -1.5707963268
+AspectRatio      0.1
+ViscosityAlpha   0.004
+Inclination      50.0
+Rplanet          5.2
+Smoothing        0.5
+ForceCutoff      0.8
+DensityFloor     1.e-20
+WDThetaBegRel    0.8
+WDRIn            0.4
+WDROut           2.1
+#+end_example
+
+Looks just as desired.
+
+**** =IniParser= class
+
+Define a parser class to bring everything together
+
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+  class IniParser:
+
+      def __init__(self, inifile):
+          self.inifile = os.path.abspath(inifile)
+          self.load()
+
+      def load(self):
+          """ Load the ini file into memory. """
+          with open(self.inifile, 'r') as rf:
+              self.cfg_dct, self.stats = parse_to_dict(rf)
+
+      def parse_dict_to_str(self):
+          """ Write the dict into lines. """
+          return parse_dict_to_str(self.cfg_dct, self.stats)
+
+      def save(self, path=None):
+          """ Write the config back to the file by default or to any file specified by *path*. """
+          if path is None:
+              path = self.inifile
+          with open(path, 'w') as of:
+              of.write('\n'.join(self.parse_dict_to_str()))
+
+      def get_param_dict(self):
+          """ Return the parameter dict. """
+          return self.cfg_dct
+#+END_SRC
+
+Now load the ini using the class and print it.
+#+BEGIN_SRC ipython :session plpar :exports both :results none
+  par = IniParser('samples/plutoSetup/pluto.ini')
+  for l in par.parse_dict_to_str():
+      print(l)
+#  par.write_to_file('test.ini')
+#+END_SRC
