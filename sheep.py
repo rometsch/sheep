@@ -128,8 +128,10 @@ class Sheep:
             for path in files:
                 tf.add(path, arcname = path.replace(self.temp_dir,'').lstrip('/'))
 
-    def move_tar_to(self, dst):
-        """ Move the tar file to the given location. """
+    def save_tar(self, dst):
+        """ Construct and move the tar file to the given location. """
+        if self.tar_file is None:
+            self.make_tar()
         shutil.move(self.tar_file, dst)
 
     def enforce_param_known(self, name):

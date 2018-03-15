@@ -7,13 +7,15 @@ def parse_to_dict(lines):
     groups = ODict()
     stats = ODict()
     name = '_root'
-    groups[name] = []
+    groups[name] = ODict()
+    stats[name] = [0,0]
+    num_comment = 1
     for line in lines:
         line = line.strip()
         # Skip empty lines
         if line == "":
             continue
-        # Identiy a header line
+        # Identify a header line
         if line[0] == '[':
             if line[-1] != ']':
                 raise ValueError('Found a line starting wih "[" but not ending in "]"!')
@@ -22,11 +24,16 @@ def parse_to_dict(lines):
             stats[name] = [0, 0]
         # Append normal lines to the last group
         else:
-            parts = line.split()
-            groups[name][parts[0]] = parts[1:]
-            stats[name] += [0]*(len(parts) - len(stats[name]))
-            for n,p in enumerate(parts):
-                stats[name][n] = max(stats[name][n], len(p))
+            if line[0] in ["#",";"]:
+                groups[name]["__comment_" + "{}".format(num_comment)] = line
+                num_comment += 1
+            else:
+                parts = line.split()
+                groups[name][parts[0]] = parts[1:]
+                stats[name] += [0]*(len(parts) - len(stats[name]))
+                for n,p in enumerate(parts):
+                    stats[name][n] = max(stats[name][n], len(p))
+
 
     return (groups, stats)
 
@@ -42,7 +49,11 @@ def parse_dict_to_str(dct, stats=None):
             lines.append('')
         # Write the key value pairs
         for key in dct[group]:
-            if stats is None:
+            if key[:9] == "__comment":
+                lines.append("")
+                lines.append(dct[group][key])
+                lines.append("")
+            elif stats is None:
                 lines.append('{}   {}'.format( key, '   '.join(dct[group][key])  ))
             else:
                 st = stats[group]
@@ -52,7 +63,7 @@ def parse_dict_to_str(dct, stats=None):
                 lines.append(line)
     return lines
 
-class PlutoIniParser:
+class IniParser:
 
     def __init__(self, inifile):
         self.inifile = os.path.abspath(inifile)
@@ -81,5 +92,6 @@ class PlutoIniParser:
 # List parser classes available in this implementation.
 # This is handy for specifying a parser class in a config file.
 avail = {
-    'plutoIni' : PlutoIniParser
+    'plutoIni' : IniParser,
+    'fargo3dIni' : IniParser
 }

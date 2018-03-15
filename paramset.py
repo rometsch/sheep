@@ -43,7 +43,6 @@ class ParamSet:
         """ Set the parameter param to its new value. """
         # Parsers hold values inside of lists to handle
         # multiple values per param.
-        print("setting {} to value {} ({})".format(param, value, type(value)))
         if isinstance(value, str):
             value = [value]
         # make a string out of anything else if it doesn't have a length
@@ -52,7 +51,6 @@ class ParamSet:
         except TypeError:
             value = ["{}".format(value)]
         keyList = self.parameter_lookup_dict[param]
-        print(value)
         setInDict(self.dct, keyList, value)
 
     def get_param(self, param):
