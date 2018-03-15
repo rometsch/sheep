@@ -76,7 +76,7 @@ After completing the process of setting the parameters, write the file from memo
 Note that, as a design choice, parameters can only be set if they are
 + already in the config file
 + defined in the setup specific config
-which is to avoid typo when setting the parameters automatically.
+which is to avoid typos when setting the parameters automatically.
 
 ** Functions to be provided by =sheep=
 
@@ -175,6 +175,37 @@ AspectRatio	h_asp	code_params.txt	# different names
 Each implementation of the class =Sheep= must define how to read and write
 parameters to a parameter file when given its filename.
 
+*** XML configs
+
+#+BEGIN_SRC xml :tangle samples/config/sheep.xml
+  <?xml version="1.0"?>
+  <data>
+    <source>
+      <file>source_file_a.c</file>
+      <dir>some_sub_dir</dir>
+    </source>
+    <scripts>
+      <start>start.sh</start>
+      <restart>restart.sh</restart>
+      <make>make.sh</make>
+    </scripts>
+  </data>
+#+END_SRC
+
+#+BEGIN_SRC ipython :session xmltest :exports both :results raw drawer
+  import xml.etree.ElementTree as ET
+  tree = ET.parse('samples/config/sheep.xml')
+  root = tree.getroot()
+  for child in root.find('./source'):
+      print("{} : {}".format(child.tag, child.text))
+  print([c.text for c in root.find('./source')])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[23]:
+:END:
+
 ** Code
 
 *** Imports
@@ -187,6 +218,9 @@ import tempfile
 import shutil
 import uuid
 import tarfile
+import xml.etree.ElementTree as ET
+import paramset
+import parser
 #+END_SRC
 
 *** Utility functions
@@ -200,6 +234,13 @@ Define a function to expand pathes with user variables and the ~ shorthand.
       path = os.path.expanduser(path)
       path = os.path.expandvars(path)
       return path
+
+  def abs_expand_path(path, base=os.getcwd()):
+      path = expand_path(path)
+      if path != os.path.abspath(path):
+          path = os.path.join(base, path)
+      return path
+
 #+END_SRC
 
 **** Parse textfiles to lines
@@ -245,37 +286,28 @@ Define a copy function that copies both, files and directories.
 #+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep.py
   class Sheep:
 
-      def __init__(self, setup_dir, config_dir='sheep'):
+      def __init__(self, setup_dir, config_file='sheep.xml'):
           self.uuid = str(uuid.uuid4())
           self.temp_dir = None
           self.temp_dir_obj = None
           self.src_list = []
+          self.scripts = {}
+          self.param_set = None
           self.parameters = {}
           self.parameters_in_config = {}
           self.tar_file = None
           self.setup_dir = os.path.abspath(setup_dir)
           # If the config dir is not an absolute path assume its meant to be inside the setup dir.
-          if config_dir != os.path.abspath(config_dir):
-              config_dir = os.path.join( setup_dir, config_dir )
-          try:
-              sources_file = os.path.join(config_dir, 'sources.txt')
-          except FileNotFoundError:
-              print("Please give the right path for the setup and config dir and provide a sources.txt file!")
-              raise
-          try:
-              parameters_file = os.path.join(config_dir, 'parameters.txt')
-          except FileNotFoundError:
-              print("Please give the right path for the setup and config dir and provide a parameters.txt file!")
-              raise
-          self.load_src_list( sources_file )
-          self.load_parameter_config( parameters_file )
+          if config_file != os.path.abspath(config_file):
+              config_file = os.path.join( setup_dir, config_file )
+          self.cfg = ET.parse(config_file);
+          self.parse_src_list()
+          self.parse_script_list()
+          #self.parse_parameter_config()
+          self.provide_temp_dir()
+          self.copy_src()
+          self.construct_param_set()
 
-      def enforce_scripts_available(self):
-          """ Check whether all required scripts are available inside the temp dir. """
-          files = os.listdir(self.temp_dir)
-          for s in ['start.py', 'restart.py', 'make.py']:
-              if not s in files:
-                  raise FileNotFoundError("Could not find {} which is a mandatory script when using sheep!".format(s))
 
       def provide_temp_dir(self):
           """ Create a save temporary directory, unique for every instance of sheep. """
@@ -283,13 +315,20 @@ Define a copy function that copies both, files and directories.
               self.temp_dir_obj = tempfile.TemporaryDirectory(prefix = self.uuid)
               self.temp_dir = self.temp_dir_obj.name
 
-      def load_src_list(self, sources_file):
+      def parse_src_list(self):
           """ Provide a list of paths to be copied to the temp directory
           directory. User variables and the ~ shorthand are expanded. """
-          lines = parse_file_to_lines( sources_file )
-          self.src_list = [expand_path(line) for line in lines]
+          self.src_list = [c.text for c in self.cfg.find('./source')]
 
-      def load_parameter_config(self, parameters_file):
+      def parse_script_list(self):
+          """ Provide a list of paths of scripts. They need to be copied aswell.
+          User variables and the ~ shorthand are expanded. """
+          scripts = self.cfg.find('./scripts')
+          self.src_list += [c.text for c in scripts]
+          for script in scripts:
+              self.scripts[script.tag] = script.text
+
+      def parse_parameter_config(self, parameters_file):
           """ Load the names of the parameters, how to translate them from generic names
           and the desitination file from the parameters.txt file. """
           lines = parse_file_to_lines( parameters_file )
@@ -312,26 +351,55 @@ Define a copy function that copies both, files and directories.
           if len(self.src_list) == 0:
               print("Warning: Nothing is copyied b.c. src_list is empty.")
           for path in self.src_list:
-              copy(path, self.temp_dir)
+              try:
+                  copy(abs_expand_path(path, base = self.setup_dir), self.temp_dir)
+              except TypeError:
+                  print("Error while trying to copy {}".format(path));
+
 
       def make_tar(self):
           """ Make a gzipped tar file containing all files and directories
           inside the tmp folder. """
+          self.save_changes()
           self.tar_file = self.get_temp_path( 'content.tgz' )
+          files = self.list_temp_dir()
           with tarfile.open( self.tar_file , 'x:gz') as tf:
-              for path in self.list_temp_dir():
-                  tf.add(path, arcname = path.lstrip(self.temp_dir))
+              for path in files:
+                  tf.add(path, arcname = path.replace(self.temp_dir,'').lstrip('/'))
 
-      def move_tar_to(self, dst):
-          """ Move the tar file to the given location. """
+      def save_tar(self, dst):
+          """ Construct and move the tar file to the given location. """
+          if self.tar_file is None:
+              self.make_tar()
           shutil.move(self.tar_file, dst)
 
       def enforce_param_known(self, name):
           if not (name in self.parameters or name in self.parameters_in_config):
               raise ValueError("Setting the parameter {} is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.".format(name))
 
-      def set_param( name, value ):
-          pass
+      def construct_param_set(self):
+          """ Make a param set object using the parser type specified in the config """
+          parserType = self.cfg.find('./paramset/type').text
+          paramFile = self.cfg.find('./paramset/path').text
+          paramFile = self.get_temp_path(paramFile)
+          try:
+              Parser = parser.avail[parserType]
+              par = Parser(paramFile)
+              self.param_set = paramset.ParamSet(par)
+          except KeyError:
+              print("Could not find parser type {}".format(parserType))
+
+      def set_param(self, param, value ):
+          try:
+              self.param_set.set_param(param, value)
+          except KeyError:
+              print("Could not find parameter {}".format(param))
+              raise
+
+      def save_changes(self):
+          """ Write saves to disk """
+          if not self.param_set is None:
+              self.param_set.parser.save()
 
       def translate_param_name(self, to_convention, name ):
           pass
@@ -341,7 +409,7 @@ Define a copy function that copies both, files and directories.
 
 #+RESULTS:
 :RESULTS:
-# Out[6]:
+# Out[5]:
 :END:
 
 ** Tests
@@ -541,6 +609,7 @@ Cached error: Could not find start.py which is a mandatory script when using she
 :RESULTS:
 Cached error: Setting the parameter foo is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.
 :END:
+
 * ParamSet
 
 ** Description
@@ -652,14 +721,16 @@ def setInDict(dataDict, mapList, value):
           """ Set the parameter param to its new value. """
           # Parsers hold values inside of lists to handle
           # multiple values per param.
+          print("setting {} to value {} ({})".format(param, value, type(value)))
           if isinstance(value, str):
               value = [value]
           # make a string out of anything else if it doesn't have a length
           try:
               len(value)
           except TypeError:
-              value = ["".format(value)]
+              value = ["{}".format(value)]
           keyList = self.parameter_lookup_dict[param]
+          print(value)
           setInDict(self.dct, keyList, value)
 
       def get_param(self, param):
@@ -676,14 +747,15 @@ def setInDict(dataDict, mapList, value):
 
 #+END_SRC
 
+
 ** Test the code
 
 *** get a dict from a parser
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output
-  import iniparser
+  import parser
   import pprint
-  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  par = parser.IniParser('samples/plutoSetup/pluto.ini')
   pset = ParamSet(par)
   pprint.pprint(pset.parameter_lookup_dict)
 #+END_SRC
@@ -743,9 +815,9 @@ OrderedDict([('X1-grid', ['Grid', 'X1-grid']),
 *** change a param in a parser
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output
-  import iniparser
+  import parser
   import pprint
-  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  par = parser.IniParser('samples/plutoSetup/pluto.ini')
   pset = ParamSet(par)
   pset.set_param('tstop', '40.0')
   print(pset.get_param('tstop'))
@@ -758,22 +830,18 @@ OrderedDict([('X1-grid', ['Grid', 'X1-grid']),
 *** write a changed param back to file
 
 #+BEGIN_SRC ipython :session sheep :exports both :results output
-  import iniparser
+  import parser
   import pprint
-  par = iniparser.IniParser('samples/plutoSetup/pluto.ini')
+  par = parser.IniParser('samples/plutoSetup/pluto.ini')
   pset = ParamSet(par)
   pset.set_param('tstop', '40.0')
   par.save('samples/plutoSetup/pluto_testwrite.ini')
-  par2 = iniparser.IniParser('samples/plutoSetup/pluto_testwrite.ini')
+  par2 = parser.IniParser('samples/plutoSetup/pluto_testwrite.ini')
   print(par2.get_param_dict()['Time']['tstop'])
 #+END_SRC
 
 #+RESULTS:
 : ['40.0']
-
-
-
-
 
 * Parsers
 
@@ -842,7 +910,7 @@ A sample config is available at =samples/plutoSetup/pluto.ini=.
 
 Import libraries
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
 import os
 from collections import OrderedDict as ODict
 #+END_SRC
@@ -919,7 +987,7 @@ Print the lines
 Now parse the lines into ordered dicts.
 Split the lines with and store the first part as key and the rest as values.
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
   def parse_to_dict(lines):
       # Initialize a first group to store key value pairs listed before the first group.
       groups = ODict()
@@ -1027,7 +1095,7 @@ OrderedDict([('_root', []),
 + leave blank lines between header lines and the key value pair lines.
 + no blank line at the beginning
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
   def parse_dict_to_str(dct, stats=None):
       lines = []
       for group in dct:
@@ -1138,7 +1206,7 @@ Looks just as desired.
 
 Define a parser class to bring everything together
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle iniparser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
   class IniParser:
 
       def __init__(self, inifile):
@@ -1172,4 +1240,36 @@ Now load the ini using the class and print it.
   for l in par.parse_dict_to_str():
       print(l)
 #  par.write_to_file('test.ini')
+#+END_SRC
+
+
+**** class dict
+
+#+BEGIN_SRC ipython :exports both :results none :tangle parser.py
+  # List parser classes available in this implementation.
+  # This is handy for specifying a parser class in a config file.
+  avail = {
+      'plutoIni' : IniParser,
+      'fargo3dIni' : IniParser
+  }
+#+END_SRC
+
+* Applications
+
+** Pluto
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+import importlib
+import parser
+import paramset
+import sheep
+importlib.reload(sheep)
+importlib.reload(parser)
+importlib.reload(paramset)
+#+END_SRC
+
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer
+s = sheep.Sheep('samples/plutoSheepSetup')
+s.set_param("Inclination", 100.0)
+s.save_tar('test')
 #+END_SRC

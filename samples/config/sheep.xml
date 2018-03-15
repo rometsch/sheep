@@ -1,0 +1,13 @@
+
+<?xml version="1.0"?>
+<data>
+  <source>
+    <file>source_file_a.c</file>
+    <dir>some_sub_dir</dir>
+  </source>
+  <scripts>
+    <start>start.sh</start>
+    <restart>restart.sh</restart>
+    <make>make.sh</make>
+  </scripts>
+</data>
