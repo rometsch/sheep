@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<data>
+  <source>
+	<dir>planets</dir>
+    <dir>scripts</dir>
+	<dir>setups</dir>
+	<dir>src</dir>
+	<dir>std</dir>
+	<dir>utils</dir>
+	<file>Makefile</file>
+  </source>
+  <scripts>
+    <start>start.sh</start>
+    <restart>restart.sh</restart>
+    <make>make.sh</make>
+  </scripts>
+  <paramset>
+	<type>fargo3dIni</type>
+	<path>setups/pdi3d/pdi3d.par</path>
+  </paramset>
+</data>
