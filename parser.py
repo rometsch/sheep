@@ -52,7 +52,7 @@ def parse_dict_to_str(dct, stats=None):
                 lines.append(line)
     return lines
 
-class IniParser:
+class PlutoIniParser:
 
     def __init__(self, inifile):
         self.inifile = os.path.abspath(inifile)
@@ -77,3 +77,9 @@ class IniParser:
     def get_param_dict(self):
         """ Return the parameter dict. """
         return self.cfg_dct
+
+# List parser classes available in this implementation.
+# This is handy for specifying a parser class in a config file.
+avail = {
+    'plutoIni' : PlutoIniParser
+}
