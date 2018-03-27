@@ -255,10 +255,10 @@ Define a copy function that copies both, files and directories.
               config_file = os.path.join( setup_dir, config_file )
           self.cfg = ET.parse(config_file);
           self.parse_src_list()
-          self.parse_script_list()
           #self.parse_parameter_config()
           self.provide_temp_dir()
           self.copy_src()
+          self.copy_scripts()
           self.construct_param_set()
 
 
@@ -273,13 +273,15 @@ Define a copy function that copies both, files and directories.
           directory. User variables and the ~ shorthand are expanded. """
           self.src_list = [c.text for c in self.cfg.find('./source')]
 
-      def parse_script_list(self):
+      def copy_scripts(self):
           """ Provide a list of paths of scripts. They need to be copied aswell.
           User variables and the ~ shorthand are expanded. """
           scripts = self.cfg.find('./scripts')
-          self.src_list += [c.text for c in scripts]
           for script in scripts:
-              self.scripts[script.tag] = script.text
+              path = script.text
+              self.scripts[script.tag] = path
+              copy( abs_expand_path(path, base = self.setup_dir),
+              os.path.join(self.temp_dir, "{}_sheep".format(script.tag) ) )
 
       def parse_parameter_config(self, parameters_file):
           """ Load the names of the parameters, how to translate them from generic names
