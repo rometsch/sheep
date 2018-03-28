@@ -2,7 +2,7 @@
 <data>
   <source>
 	<dir>planets</dir>
-    <dir>scripts</dir>
+	<dir>scripts</dir>
 	<dir>setups</dir>
 	<dir>src</dir>
 	<dir>std</dir>
@@ -10,9 +10,9 @@
 	<file>Makefile</file>
   </source>
   <scripts>
-    <start>start.sh</start>
-    <restart>restart.sh</restart>
-    <make>make.sh</make>
+	<start>start.sh</start>
+	<restart>restart.sh</restart>
+	<make>make.sh</make>
   </scripts>
   <paramset>
 	<type>fargo3dIni</type>

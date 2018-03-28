@@ -171,7 +171,8 @@ import tempfile
 import shutil
 import uuid
 import tarfile
-import xml.etree.ElementTree as ET
+#import xml.etree.ElementTree as ET
+from lxml import etree as ET
 import paramset
 import parser
 #+END_SRC
@@ -254,13 +255,20 @@ Define a copy function that copies both, files and directories.
           if config_file != os.path.abspath(config_file):
               config_file = os.path.join( setup_dir, config_file )
           self.cfg = ET.parse(config_file);
+          self.add_uuid()
           self.parse_src_list()
           #self.parse_parameter_config()
           self.provide_temp_dir()
           self.copy_src()
           self.copy_scripts()
+          self.save_config()
           self.construct_param_set()
 
+      def add_uuid(self):
+          """ Insert the uuid into config. """
+          elem = ET.Element('uuid')
+          elem.text = self.uuid
+          self.cfg.getroot().insert(0, elem)
 
       def provide_temp_dir(self):
           """ Create a save temporary directory, unique for every instance of sheep. """
@@ -272,6 +280,11 @@ Define a copy function that copies both, files and directories.
           """ Provide a list of paths to be copied to the temp directory
           directory. User variables and the ~ shorthand are expanded. """
           self.src_list = [c.text for c in self.cfg.find('./source')]
+
+      def save_config(self):
+          """ Copy the config file as reference. """
+          dst = os.path.join(self.temp_dir, "sheep.xml" )
+          self.cfg.write( dst, encoding='UTF-8', xml_declaration=True )
 
       def copy_scripts(self):
           """ Provide a list of paths of scripts. They need to be copied aswell.
