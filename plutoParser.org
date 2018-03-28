@@ -1,2 +1,0 @@
-#+TITLE: Parsers for the ini files of the PLUTO astro code
-#+AUTHOR: Thomas Rometsch
