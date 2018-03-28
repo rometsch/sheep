@@ -4,8 +4,7 @@ import tempfile
 import shutil
 import uuid
 import tarfile
-#import xml.etree.ElementTree as ET
-from lxml import etree as ET
+import xml.etree.ElementTree as ET
 import paramset
 import parser
 
@@ -70,6 +69,7 @@ class Sheep:
         self.copy_src()
         self.copy_scripts()
         self.save_config()
+        self.save_uuid()
         self.construct_param_set()
 
     def add_uuid(self):
@@ -77,6 +77,11 @@ class Sheep:
         elem = ET.Element('uuid')
         elem.text = self.uuid
         self.cfg.getroot().insert(0, elem)
+
+    def save_uuid(self):
+        """ Save the uuid to a file. """
+        with open( os.path.join( self.temp_dir, "uuid"), "w" ) as of:
+            of.write(self.uuid)
 
     def provide_temp_dir(self):
         """ Create a save temporary directory, unique for every instance of sheep. """
