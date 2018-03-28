@@ -165,7 +165,7 @@ parameters to a parameter file when given its filename.
 
 Import libraries
 
-#+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
+#+BEGIN_SRC ipython :session sheep :results none :tangle sheep/sheep.py
 import os
 import tempfile
 import shutil
@@ -182,7 +182,7 @@ import parser
 
 Define a function to expand pathes with user variables and the ~ shorthand.
 
-#+BEGIN_SRC ipython :session sheep :results none :tangle sheep.py
+#+BEGIN_SRC ipython :session sheep :results none :tangle sheep/sheep.py
   def expand_path(path):
       path = os.path.expanduser(path)
       path = os.path.expandvars(path)
@@ -200,7 +200,7 @@ Define a function to expand pathes with user variables and the ~ shorthand.
 
 Define a function to parse a textfile and remove empty lines and text after #.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep.py
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep/sheep.py
   def parse_file_to_lines( filepath ):
       """ Parse a textfile into a list with lines.
       Remove all text following the cahracter #.
@@ -221,7 +221,7 @@ Define a function to parse a textfile and remove empty lines and text after #.
 
 Define a copy function that copies both, files and directories.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep.py
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep/sheep.py
   def copy(src, dst):
       """ Copy both files and directories from src to dst.
       For files, copy2() and for directories copytree is used. """
@@ -236,7 +236,7 @@ Define a copy function that copies both, files and directories.
 
 *** =Sheep= class
 
-#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep.py
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep/sheep.py
   class Sheep:
 
       def __init__(self, setup_dir, config_file='sheep.xml'):
@@ -624,7 +624,7 @@ The structure of the parameter dicts is as follows.
 
 *** imports
 
-#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle paramset.py
+#+BEGIN_SRC ipython :session sheep :exports both :results raw drawer :tangle sheep/paramset.py
 import os
 from collections import OrderedDict as ODict
 #+END_SRC
@@ -640,7 +640,7 @@ Put the group in a list and simply append a possible additional group names.
 This makes it easy to handle collisions and at the same time makes finding the
 parameters easy.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep/paramset.py
 
   def parameter_lookup_dict(dct):
       """ Make a dict to lookup where a given parameter is stored. """
@@ -662,7 +662,7 @@ parameters easy.
 Use strategy from this [[https://stackoverflow.com/questions/14692690/access-nested-dictionary-items-via-a-list-of-keys][stackoverflow thread]] to handle accessing nested dicts
 with lists of keys.
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep/paramset.py
 from functools import reduce
 import operator
 
@@ -675,7 +675,7 @@ def setInDict(dataDict, mapList, value):
 
 *** the class
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle paramset.py
+#+BEGIN_SRC ipython :session sheep :exports both :results none :tangle sheep/paramset.py
   class ParamSet:
 
       def __init__(self, parser = None):
@@ -881,7 +881,7 @@ A sample config is available at =samples/plutoSetup/pluto.ini=.
 
 Import libraries
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle sheep/parser.py
 import os
 from collections import OrderedDict as ODict
 #+END_SRC
@@ -960,7 +960,7 @@ Split the lines with and store the first part as key and the rest as values.
 
 
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle sheep/parser.py
   def parse_to_dict(lines):
       # Initialize a first group to store key value pairs listed before the first group.
       groups = ODict()
@@ -1075,7 +1075,7 @@ OrderedDict([('_root', []),
 + leave blank lines between header lines and the key value pair lines.
 + no blank line at the beginning
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle sheep/parser.py
   def parse_dict_to_str(dct, stats=None):
       lines = []
       for group in dct:
@@ -1190,7 +1190,7 @@ Looks just as desired.
 
 Define a parser class to bring everything together
 
-#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle parser.py
+#+BEGIN_SRC ipython :session plpar :exports both :results none :tangle sheep/parser.py
   class IniParser:
 
       def __init__(self, inifile):
@@ -1229,7 +1229,7 @@ Now load the ini using the class and print it.
 
 **** class dict
 
-#+BEGIN_SRC ipython :exports both :results none :tangle parser.py
+#+BEGIN_SRC ipython :exports both :results none :tangle sheep/parser.py
   # List parser classes available in this implementation.
   # This is handy for specifying a parser class in a config file.
   avail = {
@@ -1420,14 +1420,14 @@ Log                  yes
 
 #+BEGIN_SRC ipython :session sheep :exports both :results none
   import importlib
-  import parser
-  import paramset
+  import sheep.parser
+  import sheep.paramset
   import sheep
   import os
   import shutil
   importlib.reload(sheep)
-  importlib.reload(parser)
-  importlib.reload(paramset)
+  importlib.reload(sheep.parser)
+  importlib.reload(sheep.paramset)
   os.path.expanduser('~/repo/sheep')
 #+END_SRC
 
