@@ -184,7 +184,6 @@ Define a function to expand pathes with user variables and the ~ shorthand.
 
 #+BEGIN_SRC ipython :session sheep :results none :tangle sheep/sheep.py
   def expand_path(path):
-      path = os.path.expanduser(path)
       path = os.path.expandvars(path)
       return path
 
