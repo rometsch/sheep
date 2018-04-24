@@ -4,11 +4,10 @@ import shutil
 import uuid
 import tarfile
 import xml.etree.ElementTree as ET
-import paramset
-import parser
+from . import paramset
+from . import parser
 
 def expand_path(path):
-    path = os.path.expanduser(path)
     path = os.path.expandvars(path)
     return path
 
