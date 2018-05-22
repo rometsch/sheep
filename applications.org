@@ -1,0 +1,48 @@
+#+title: Applying sheep to real world codes
+#+author: Thomas Rometsch
+
+* Applications
+
+** Preparation
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+  import importlib
+  import sheep.parser
+  import sheep.paramset
+  import sheep
+  import os
+  import shutil
+  importlib.reload(sheep)
+  importlib.reload(sheep.parser)
+  importlib.reload(sheep.paramset)
+  workdir = os.path.expanduser('~/repo/sheep')
+  os.chdir(workdir)
+#+END_SRC
+
+** Pluto
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+  try:
+      shutil.rmtree('test/pluto')
+  except FileNotFoundError:
+      pass
+  os.makedirs('test/pluto')
+  s = sheep.Sheep('samples/plutoSheepSetup')
+  s.set_param("Inclination", 100.0)
+  s.save_tar('test/pluto/content.tgz')
+#+END_SRC
+
+** fargo3d
+
+#+BEGIN_SRC ipython :session sheep :exports both :results none
+  try:
+      shutil.rmtree('test/fargo3d')
+  except FileNotFoundError:
+      pass
+  os.makedirs('test/fargo3d')
+  setup_dir = os.path.expanduser('~/repo/fargo3d')
+  config_file = os.path.expanduser('~/repo/fargo3d/sheep_pdi3d.xml')
+  s = sheep.Sheep(setup_dir, config_file=config_file )
+  s.set_param("Ntot", 100)
+  s.save_tar('test/fargo3d/test_queue.tgz')
+#+END_SRC
