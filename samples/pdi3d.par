@@ -1,0 +1,53 @@
+Setup			pdi3d
+
+### Disk parameters
+
+AspectRatio         0.05            Thickness over Radius in the disc
+Sigma0	            6.452e-4        Surface Density at r=1
+SigmaSlope          0.5             Slope of surface
+FlaringIndex        0.0
+Alpha               0.004
+
+### Planet parameters
+
+PlanetConfig		planets/SuperEarth.cfg
+ThicknessSmoothing 	0.1		Smoothing parameters in disk thickness
+Inclination         0.5235987755982988    30 degree
+
+### Numerical method parameters
+
+Disk			YES
+OmegaFrame      1.0
+Frame			G
+IndirectTerm		No
+
+### Mesh parameters
+
+Nx          512     Azimuthal number of zones
+Ny          256     Radial number of zones
+Nz			24      Number of zones in colatitude
+Ymin        0.4     Inner boundary radius
+Ymax        2.5     Outer boundary radius
+Zmin        1.42079632679489661922
+Zmax        1.72079632679489661922
+Xmin        -3.141592653589793
+Xmax        3.141592653589793
+
+### Wave damping regions
+WdFYmin      0.05
+WdFYmax      0.1
+WdFZmin      0.1
+WdFZmax      0.1
+
+### Force calculation
+ExcludeHill     YES
+
+### Output control parameters
+
+Ntot			10001		Total number of time steps
+Ninterm	 		100		Time steps between outputs
+DT			    0.001	Time step length. 2PI = 1 orbit
+OutputDir		@outputs/p3disof
+
+Field 			gasdens
+PlotLine		field[-1,:,:]
