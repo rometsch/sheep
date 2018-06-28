@@ -105,7 +105,7 @@ class Sheep:
             path = script.text
             self.scripts[script.tag] = path
             copy( abs_expand_path(path, base = self.setup_dir),
-            os.path.join(self.temp_dir, "{}_sheep".format(script.tag) ) )
+            os.path.join(self.temp_dir, "sheep_{}".format(script.tag) ) )
 
     def parse_parameter_config(self, parameters_file):
         """ Load the names of the parameters, how to translate them from generic names

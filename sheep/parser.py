@@ -92,5 +92,6 @@ class IniParser:
 # This is handy for specifying a parser class in a config file.
 avail = {
     'plutoIni' : IniParser,
-    'fargo3dIni' : IniParser
+    'fargo3dIni' : IniParser,
+    'fargoIni' : IniParser
 }
