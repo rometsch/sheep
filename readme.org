@@ -71,3 +71,36 @@ This is the right place to define environment variables like paths to libraries 
 | setup.sh | sheep_queue   | setup the code: compile, copy, ...          |
 | queue.sh | sheep_queue   | queue a job in the correct way              |
 | start.sh | sheep_start   | start or restart a job                      |
+
+* Container structure
+
+The basic functionality of the sheep container is to abstract the process of running
+some arbitrary code.
+A list of actions I might need is
+
++ simulation
++ postprocessing
++ visualization
++ archiving
+
+My current practice is, to use a new workspace for every simulation, i.e. for every
+run of my simulation programs.
+I want to be able to run additional programs on the output of these simulations.
+Just as for the simulations themselves, I want to use an abstract interface to start,
+stop or queue these programs and leave the program code and executable inside the
+workspace to make it reproduceable.
+
+The Docker container files inspired me to have some kind of container structure.
+These have a =run.sh= script which starts the program inside the Docker file.
+
+For my programs and simulations a container file could be structured as follows
+
+#+BEGIN_EXAMPLE
++ sample_container
++---> start.sh		supports starting and restarting (optional)
++---> queue.sh
++---> meta.xml or meta.json or ...
++--+ program
+   +---> some_executable
+   +---> ...
+#+END_EXAMPLE

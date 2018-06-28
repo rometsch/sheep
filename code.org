@@ -583,6 +583,22 @@ Cached error: Could not find start.py which is a mandatory script when using she
 Cached error: Setting the parameter foo is not allowed. Make sure it is spelled correct and that its either definde in the config or already present inside a config file.
 :END:
 
+* TODO Enhancements
+
+** TODO specify queue with command line argument
+
+Some alternative options or enhancements
+
++ Might set this using the python interface too, since all simulations are prepared there anyways.
+
++ automatically call a load balancer on cpt hosts
+  + can be very easy, just look in bjobs and pick the queue with the least jobs
+
+
+** TODO add possibility to toogle or set build options for Fargo3d, parser
+
++ require the option to be already present
++ just comment/uncomment options
 * ParamSet
 
 ** Description
@@ -1415,47 +1431,38 @@ OutputDir            @outputs/fargo
 Log                  yes
 #+end_example
 
-* Applications
+* Package
+** Setup
 
-** Preparation
+Install the =sheep= to your user directory with
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none
-  import importlib
-  import sheep.parser
-  import sheep.paramset
-  import sheep
-  import os
-  import shutil
-  importlib.reload(sheep)
-  importlib.reload(sheep.parser)
-  importlib.reload(sheep.paramset)
-  os.path.expanduser('~/repo/sheep')
+#+BEGIN_SRC sh
+python3 setup.py install --user
 #+END_SRC
 
-** Pluto
+which runs the setup script
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none
-  try:
-      shutil.rmtree('test/pluto')
-  except FileNotFoundError:
-      pass
-  os.makedirs('test/pluto')
-  s = sheep.Sheep('samples/plutoSheepSetup')
-  s.set_param("Inclination", 100.0)
-  s.save_tar('test/pluto/content.tgz')
+#+BEGIN_SRC python :tangle setup.py
+#!/usr/bin/env python3
+
+from distutils.core import setup
+
+setup(  name="sheep"
+        ,version="0.1"
+        ,description="Simulation HElper for Exploring Parameter space."
+        ,author="Thomas Rometsch"
+		,packages=['sheep']
+        )
+
 #+END_SRC
 
-** fargo3d
+** Init
 
-#+BEGIN_SRC ipython :session sheep :exports both :results none
-  try:
-      shutil.rmtree('test/fargo3d')
-  except FileNotFoundError:
-      pass
-  os.makedirs('test/fargo3d')
-  setup_dir = os.path.expanduser('~/repo/fargo3d')
-  config_file = os.path.expanduser('~/repo/fargo3d/sheep_pdi3d.xml')
-  s = sheep.Sheep(setup_dir, config_file=config_file )
-  s.set_param("AspectRatio", 0.2)
-  s.save_tar('test/fargo3d/content.tgz')
+The package dir needs to include an file called =__init__.py= for python to know that there are modules inside the directory.
+To conveniently access the =Sheep= class =sheep.Sheep=, the =sheep.py= file is also imported in the init file.
+
+Note the dot in front of sheep. With out it, the import ends in an infinite recursion loop!
+
+#+BEGIN_SRC python :tangle sheep/__init__.py
+from .sheep import *
 #+END_SRC
