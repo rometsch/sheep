@@ -52,3 +52,22 @@ This is where =sheep= comes in.
 	 * CPU vs GPU (CUDA)
 4. support the usage of setups
 5. check that parameters are reasonable by specifying simple rules (e.g. boundaries on the value)
+* Deployment scripts
+
+The =scripts= folder contains multiple scripts to be used with sheep.
+Version 1 emerged from helper scripts written while using the Fargo and Fargo3d code.
+
+The location of the scripts are specified in the =sheep.xml= file and are saved into the sheep under standard names.
+This way, scripts with different versions file may be used together and setup specific files can be used without altering the other files.
+
+Note the =sheep_env= file, which is much like a shell's =rc= file setting environment variables.
+This is the right place to define environment variables like paths to libraries for different hosts.
+
+** version 1
+
+| filename | translated to | purpose                                     |
+|----------+---------------+---------------------------------------------|
+| env      | sheep_env     | set environment variables depending on host |
+| setup.sh | sheep_queue   | setup the code: compile, copy, ...          |
+| queue.sh | sheep_queue   | queue a job in the correct way              |
+| start.sh | sheep_start   | start or restart a job                      |

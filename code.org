@@ -141,6 +141,7 @@ parameters to a parameter file when given its filename.
       <start>start.sh</start>
       <restart>restart.sh</restart>
       <make>make.sh</make>
+      <env>env</env>
     </scripts>
   </data>
 #+END_SRC
@@ -1233,7 +1234,8 @@ Now load the ini using the class and print it.
   # This is handy for specifying a parser class in a config file.
   avail = {
       'plutoIni' : IniParser,
-      'fargo3dIni' : IniParser
+      'fargo3dIni' : IniParser,
+      'fargoIni' : IniParser
   }
 #+END_SRC
 
