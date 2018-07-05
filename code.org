@@ -53,16 +53,6 @@ To go the other way around and translate from the parameter with name 'FoO' from
 
 The translation dictionaries need to be provided by the code specific implementation in a file called =parameters.txt=.
 
-*** =enforce_scripts_available()= =(g)=
-
-This functions checks for the scripts
-+ =start.py=
-+ =restart.py=
-+ =make.py=
-which are supposed to be copied to the root of the temporary directory.
-The function of these scripts is not checked, however.
-Its the responsibility of the user to make them work properly.
-
 *** =provide_temp_dir()= =(g)=
 
 This function provides a temporary directory.
@@ -139,8 +129,7 @@ parameters to a parameter file when given its filename.
     </source>
     <scripts>
       <start>start.sh</start>
-      <restart>restart.sh</restart>
-      <make>make.sh</make>
+      <prep>make.sh</prep>
       <env>env</env>
     </scripts>
   </data>

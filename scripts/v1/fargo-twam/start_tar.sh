@@ -8,7 +8,7 @@ mkdir $name
 tar -xzvf $1 -C $name
 
 cd $name
-./sheep_setup
+./sheep_prep
 ./sheep_queue sheep_start
 cd ..
 
