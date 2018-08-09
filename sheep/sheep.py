@@ -39,6 +39,10 @@ def copy(src, dst):
     Thus src=/foo/bar/baz, dst=bla/ becomes dst=bla/baz"""
     if dst[-1] == "/":
         dst = os.path.join(dst, os.path.basename(src))
+	if src[-1] == "*":
+		basedir = src[:-1]
+		for f in os.listdir(basedir):
+			copy(os.path.join(basedir, f), dst)
     try:
         shutil.copy2(src, dst)
     except IsADirectoryError:
