@@ -37,12 +37,13 @@ def copy(src, dst):
     For files, copy2() and for directories copytree is used.
     If dst ends with an /, construct a new path appending last level from src to dst.
     Thus src=/foo/bar/baz, dst=bla/ becomes dst=bla/baz"""
+    if src[-1] == "*":
+        basedir = os.path.dirname(src)
+        for f in os.listdir(basedir):
+            copy(os.path.join(basedir, f), dst)
+        return
     if dst[-1] == "/":
         dst = os.path.join(dst, os.path.basename(src))
-	if src[-1] == "*":
-		basedir = src[:-1]
-		for f in os.listdir(basedir):
-			copy(os.path.join(basedir, f), dst)
     try:
         shutil.copy2(src, dst)
     except IsADirectoryError:
