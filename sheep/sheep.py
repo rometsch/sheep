@@ -157,9 +157,10 @@ class Sheep:
             print("Warning: Nothing is copyied. src_list is empty.")
         for cp in self.src_list:
             try:
-                copy(abs_expand_path(path, base = self.setup_dir), self.temp_dir)
+                copy(abs_expand_path(cp['src'], base = self.setup_dir), os.path.join(self.temp_dir, cp['dst'] if 'dst' in cp else ''))
             except TypeError:
-                print("Error while trying to copy {}".format(path));
+                #print("Error while trying to copy {}".format(path));
+                raise
 
 
     def make_tar(self):
