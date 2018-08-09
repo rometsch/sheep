@@ -51,6 +51,9 @@ def copy(src, dst):
             shutil.copytree(src, dst)
         except FileExistsError:
             shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
+    except FileNotFoundError:
+        os.makedirs( os.path.dirname(dst) )
+        copy(src, dst)
 
 class Sheep:
 
