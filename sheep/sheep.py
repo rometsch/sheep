@@ -111,12 +111,12 @@ class Sheep:
             except AttributeError:
             # if there is no children with tag 'src', use text attribute directly
                 cp['src'] = s.text
-                try:
-                    # try to find the destination path
-                    cp['dst'] = s.find('dst').text
-                except AttributeError:
-                    pass
-                self.src_list.append(cp)
+            try:
+                # try to find the destination path
+                cp['dst'] = s.find('dst').text
+            except AttributeError:
+                pass
+            self.src_list.append(cp)
 
     def save_config(self):
         """ Copy the config file as reference. """
