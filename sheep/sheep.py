@@ -34,7 +34,11 @@ def parse_file_to_lines( filepath ):
 
 def copy(src, dst):
     """ Copy both files and directories from src to dst.
-    For files, copy2() and for directories copytree is used. """
+    For files, copy2() and for directories copytree is used.
+	If dst ends with an /, construct a new path appending last level from src to dst.
+	Thus src=/foo/bar/baz, dst=bla/ becomes dst=bla/baz"""
+	if dst[-1] == "/":
+		dst = os.path.join(dst, os.path.basename(src)
     try:
         shutil.copy2(src, dst)
     except IsADirectoryError:
@@ -90,7 +94,21 @@ class Sheep:
     def parse_src_list(self):
         """ Provide a list of paths to be copied to the temp directory
         directory. User variables and the ~ shorthand are expanded. """
-        self.src_list = [c.text for c in self.cfg.find('./source')]
+		self.src_list = []
+        for s in self.cfg.find('./source'):
+			cp = {}
+			try:
+				# Try to find the source path
+				cp['src'] = s.find('src').text
+			except AttributeError:
+				# if there is no children with tag 'src', use text attribute directly
+				cp['src'] = s.text
+			try:
+				# try to find the destination path
+				cp['dst'] = s.find('dst').text
+			except AttributeError:
+				pass
+			self.src_list.append(cp)
 
     def save_config(self):
         """ Copy the config file as reference. """
@@ -128,10 +146,12 @@ class Sheep:
 
     def copy_src(self):
         if len(self.src_list) == 0:
-            print("Warning: Nothing is copyied b.c. src_list is empty.")
-        for path in self.src_list:
+            print("Warning: Nothing is copyied. src_list is empty.")
+        for cp in self.src_list:
             try:
-                copy(abs_expand_path(path, base = self.setup_dir), self.temp_dir)
+				if 'dst' in cp:
+					if cp['dst'][-1] == "/"
+					copy(abs_expand_path(path, base = self.setup_dir), self.temp_dir)
             except TypeError:
                 print("Error while trying to copy {}".format(path));
 
