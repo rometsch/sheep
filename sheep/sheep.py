@@ -81,9 +81,11 @@ class Sheep:
         #self.parse_parameter_config()
         self.provide_temp_dir()
         self.copy_src()
+        self.make_sheep_dir()
         self.copy_scripts()
         self.save_config()
         self.save_uuid()
+        self.save_sheep_version()
         self.construct_param_set()
 
     def add_uuid(self):
@@ -94,8 +96,18 @@ class Sheep:
 
     def save_uuid(self):
         """ Save the uuid to a file. """
-        with open( os.path.join( self.temp_dir, "uuid"), "w" ) as of:
+        with open( os.path.join( self.sheep_dir, "uuid"), "w" ) as of:
             of.write(self.uuid)
+
+    def save_sheep_version(self):
+        """ Save the uuid to a file. """
+        with open( os.path.join( self.sheep_dir, "version"), "w" ) as of:
+            of.write(__version__)
+
+    def make_sheep_dir(self):
+        """ Make the sheep directory inside the tempdir """
+        self.sheep_dir = os.path.join(self.temp_dir, ".sheep.d")
+        os.makedirs(
 
     def provide_temp_dir(self):
         """ Create a save temporary directory, unique for every instance of sheep. """
@@ -135,7 +147,7 @@ class Sheep:
             path = script.text
             self.scripts[script.tag] = path
             copy( abs_expand_path(path, base = self.setup_dir),
-            os.path.join(self.temp_dir, "sheep/", script.tag ) )
+            os.path.join(self.sheep_dir, script.tag ) )
 
     def parse_parameter_config(self, parameters_file):
         """ Load the names of the parameters, how to translate them from generic names
