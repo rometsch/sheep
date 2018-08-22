@@ -1,3 +1,7 @@
+""" A Simulation HElpEr for Parameter studies. """
+__author__ = "Thomas Rometsch"
+__version__ = "1.0.0"
+
 import os
 import tempfile
 import shutil
