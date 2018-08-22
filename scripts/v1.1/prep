@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# sheep version: 1
+
+source sheep/env
+
+$PLUTO_DIR/setup.py --auto-update
+make
+make clean
+mkdir output

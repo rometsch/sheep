@@ -1,0 +1,31 @@
+# sheep version: 1
+# This file contains environment variables and loads additional modules
+# It is sourced in make/start/restart_sheep
+
+export PLUTO_DIR="$(pwd)/pluto-src"
+export SETUP=idoco
+export GPUDEVICE=1
+
+case $(hostname -s) in
+	login0*)
+		export NCPU=1
+		export QUEUE=gpu
+		export GPUDEVICE=0
+		module load devel/cuda/8.0
+		;;
+	cpt-titan)
+		export QUEUE=default
+		export NCPU=1
+		export GPUDEVICE=$GPUDEVICE
+		;;
+	cpt-pandora)
+		export NCPU=1
+		;;
+	cpt-*)
+		export NCPU=1
+		export QUEUE=gpu$GPUDEVICE
+		;;
+  	*)
+		export NCPU=1
+  		;;
+esac

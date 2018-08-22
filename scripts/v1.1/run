@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+./.sheep.d/prep
+./.sheep.d/queue ./.sheep.d/start
