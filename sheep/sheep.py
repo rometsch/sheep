@@ -135,7 +135,7 @@ class Sheep:
             path = script.text
             self.scripts[script.tag] = path
             copy( abs_expand_path(path, base = self.setup_dir),
-            os.path.join(self.temp_dir, "sheep/" ) )
+            os.path.join(self.temp_dir, "sheep/", script.tag ) )
 
     def parse_parameter_config(self, parameters_file):
         """ Load the names of the parameters, how to translate them from generic names
@@ -163,7 +163,7 @@ class Sheep:
             try:
                 copy(abs_expand_path(cp['src'], base = self.setup_dir), os.path.join(self.temp_dir, cp['dst'] if 'dst' in cp else ''))
             except TypeError:
-                #print("Error while trying to copy {}".format(path));
+                print("Error while trying to copy {}".format(path));
                 raise
 
 
