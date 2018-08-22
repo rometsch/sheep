@@ -11,6 +11,9 @@ import xml.etree.ElementTree as ET
 from . import paramset
 from . import parser
 
+class MissingRunfileError(Exception):
+    pass
+
 def expand_path(path):
     path = os.path.expandvars(path)
     return path
@@ -142,12 +145,18 @@ class Sheep:
     def copy_scripts(self):
         """ Provide a list of paths of scripts. They need to be copied aswell.
         User variables and the ~ shorthand are expanded. """
+        have_runfile = False
         scripts = self.cfg.find('./scripts')
         for script in scripts:
+            if script.tag == "run":
+                have_runfile = True
             path = script.text
             self.scripts[script.tag] = path
             copy( abs_expand_path(path, base = self.setup_dir),
             os.path.join(self.sheep_dir, script.tag ) )
+        if not have_runfile:
+            raise MissingRunfileError("Starting from version 1.1.0 at least one script, the runfile, is required.")
+        os.symlink(".sheep.d/run", os.path.join(self.temp_dir, 'run'))
 
     def parse_parameter_config(self, parameters_file):
         """ Load the names of the parameters, how to translate them from generic names
