@@ -110,7 +110,7 @@ class Sheep:
     def make_sheep_dir(self):
         """ Make the sheep directory inside the tempdir """
         self.sheep_dir = os.path.join(self.temp_dir, ".sheep.d")
-        os.makedirs(
+        os.makedirs(self.sheep_dir)
 
     def provide_temp_dir(self):
         """ Create a save temporary directory, unique for every instance of sheep. """
