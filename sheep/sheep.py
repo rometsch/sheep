@@ -3,6 +3,7 @@ __author__ = "Thomas Rometsch"
 __version__ = "1.1.0"
 
 import os
+import subprocess
 import tempfile
 import shutil
 import uuid
@@ -139,7 +140,7 @@ class Sheep:
 
     def save_config(self):
         """ Copy the config file as reference. """
-        dst = os.path.join(self.temp_dir, "sheep.xml" )
+        dst = os.path.join(self.sheep_dir, "config.xml" )
         self.cfg.write( dst, encoding='UTF-8', xml_declaration=True )
 
     def copy_scripts(self):
