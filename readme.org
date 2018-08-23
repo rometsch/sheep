@@ -52,6 +52,7 @@ This is where =sheep= comes in.
 	 * CPU vs GPU (CUDA)
 4. support the usage of setups
 5. check that parameters are reasonable by specifying simple rules (e.g. boundaries on the value)
+
 * Deployment scripts
 
 The =scripts= folder contains multiple scripts to be used with sheep.
@@ -104,3 +105,29 @@ For my programs and simulations a container file could be structured as follows
    +---> some_executable
    +---> ...
 #+END_EXAMPLE
+
+** TODO describe new structure with sheep dir and give it a version number
+SCHEDULED: <2018-08-22 Mi>
+
+* Enhancements
+
+** TODO allow specifying inital conditions for planet systems
+SCHEDULED: <2018-08-22 Mi>
+
+Both, PlutoCUDA and Fargo3d, support setting intial conditions of planets using a simple tab separated ini file.
+Write a parser for this file an make it available in sheep.
+
+** DONE save tars to remote host directly
+SCHEDULED: <2018-08-23 Do>
+
+* Changelog
+
+** v1.2.0 2018-08-23
+
++ support saving the tar to a remote host directly using =scp= syntax
++ copy config to sheep dir instead of root dir
+
+** v1.1.0 2018-08-21
+
++ new structure of scripts
+  require at least a runscript
