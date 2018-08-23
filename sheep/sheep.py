@@ -202,7 +202,13 @@ class Sheep:
         """ Construct and move the tar file to the given location. """
         if self.tar_file is None:
             self.make_tar()
-        shutil.move(self.tar_file, dst)
+        if ':' in dst:
+            #copy tar via scp to remote host
+            p = subprocess.run(['scp', self.tar_file, dst])
+            if p.returncode != 0:
+                print(p.stdout, p.stderr)
+        else:
+            shutil.move(self.tar_file, dst)
 
     def enforce_param_known(self, name):
         if not (name in self.parameters or name in self.parameters_in_config):
