@@ -17,16 +17,21 @@ outfile_path = args.o if args.o is not None else args.file
 param_name = args.param
 new_param_value = args.value
 
-ptrn = re.compile(r"({}[ \t]+)([\S]+(?=\s))".format(param_name))
+ptrn = re.compile(r"\A([ \t]*{}[ \t]+)([\S]+(?=\s))".format(param_name))
 
+NreplTot = 0
 with open(infile_path, 'r') as infile:
-    outstr, Nrepl = re.subn(ptrn, r"\g<1>{}".format(new_param_value), infile.read())
+    outlines = []
+    for line in infile:
+        out, Nrepl = re.subn(ptrn, r"\g<1>{}".format(new_param_value), line)
+        outlines.append( out )
+        NreplTot += Nrepl
 
-if Nrepl > 1:
+if NreplTot > 1:
     raise AssertionError("Replaced {} instead of 1 occurances of parameter '{}'".format(Nrepl, param_name))
 
-if Nrepl == 0:
+if NreplTot == 0:
     raise AssertionError("Could not find parameter '{}' in '{}'".format(param_name, infile_path))
 
 with open(outfile_path, 'w') as outfile:
-    outfile.write(outstr)
+    outfile.write("".join(outlines))
