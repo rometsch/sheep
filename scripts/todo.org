@@ -1,0 +1,12 @@
+#+title: Todos for the sheep project
+#+author: Thomas Rometsch
+#+filetags: sheep
+
+* TODO restructure notes
+
+abandon the literal programming approach and restructure the notes
+
+* TODO extract tests from codeing document
+
+* TODO make definitions in env file changable programatically
+SCHEDULED: <2018-08-09 Do>
