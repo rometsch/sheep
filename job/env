@@ -1,0 +1,52 @@
+# This file contains environment variables and loads additional modules
+# It is sourced in prep/start/queue
+
+export SETUP="TD2P"
+export HOURS=5
+export NGPU=1
+export NCPU=14
+
+export DEVICE=0
+
+export LOGDIR="job"
+
+function limitNCPU ()
+{
+	if (( $NCPU > $1 ))
+	then
+		export NCPU=$1
+	fi
+}
+
+# determine whether this is a gpu job
+if (( $NGPU > 0 ))
+then
+	export RUNONGPU="YES"
+	# restrict number of CPUs to number of GPUS
+	limitNCPU $NGPU
+else
+	export RUNONGPU="NO"
+fi
+
+
+
+case $(hostname -s) in
+	login0*)
+		export FARGO_ARCH="BINAC"
+		limitNCPU 28
+		if [[ $RUNONGPU == "YES" ]]
+		then
+			export QUEUE="gpu"
+		else
+			export QUEUE="long"
+		fi
+		;;
+	cpt-*)
+		export FARGO_ARCH="CPT"
+		limitNCPU 10
+		;;
+  	*)
+		export FARGO_ARCH="LINUX"
+		limitNCPU 8
+		;;
+esac
