@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# sheep v1.2
 
 filename="$1"
 name="${filename%.*}"
@@ -9,8 +10,7 @@ mkdir $name
 tar -xzvf $1 -C $name
 
 cd $name
-./sheep_prep
-./sheep_queue sheep_start
+./run
 cd ..
 
 mv $filename $name
