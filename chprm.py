@@ -5,33 +5,41 @@
 import re
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("file", help="config file to change parameter in")
-parser.add_argument("param", help="parameter to be changed")
-parser.add_argument("value", help="new value")
-parser.add_argument("-o", help="output file path")
-args = parser.parse_args()
+def main():
 
-infile_path = args.file
-outfile_path = args.o if args.o is not None else args.file
-param_name = args.param
-new_param_value = args.value
+    parser = argparse.ArgumentParser()
+    parser.add_argument("infile", help="config file to change parameter in")
+    parser.add_argument("param", help="parameter to be changed")
+    parser.add_argument("value", help="new value")
+    parser.add_argument("-o", help="output file path")
+    args = parser.parse_args()
 
-ptrn = re.compile(r"\A([ \t]*{}[ \t]+)([\S]+(?=\s))".format(param_name))
+    change_param(args.infile, args.param, args.value,
+                 outfile_path = args.o)
+    
+def change_param(infile_path, param, value, outfile_path=None):
 
-NreplTot = 0
-with open(infile_path, 'r') as infile:
-    outlines = []
-    for line in infile:
-        out, Nrepl = re.subn(ptrn, r"\g<1>{}".format(new_param_value), line)
-        outlines.append( out )
-        NreplTot += Nrepl
+    outfile_path = outfile_path if outfile_path is not None else infile_path
 
-if NreplTot > 1:
-    raise AssertionError("Replaced {} instead of 1 occurances of parameter '{}'".format(Nrepl, param_name))
+    ptrn = re.compile(r"\A([ \t]*{}[ \t]+)([\S]+(?=\s))".format(param))
+    
+    NreplTot = 0
+    with open(infile_path, 'r') as infile:
+        outlines = []
+        for line in infile:
+            out, Nrepl = re.subn(ptrn, r"\g<1>{}".format(value), line)
+            outlines.append( out )
+            NreplTot += Nrepl
+    
+    if NreplTot > 1:
+        raise AssertionError("Replaced {} instead of 1 occurances of parameter '{}'".format(Nrepl, param))
+    
+    if NreplTot == 0:
+        raise AssertionError("Could not find parameter '{}' in '{}'".format(param, infile_path))
+    
+    with open(outfile_path, 'w') as outfile:
+        outfile.write("".join(outlines))
+    
 
-if NreplTot == 0:
-    raise AssertionError("Could not find parameter '{}' in '{}'".format(param_name, infile_path))
-
-with open(outfile_path, 'w') as outfile:
-    outfile.write("".join(outlines))
+if __name__=="__main__":
+    main()
