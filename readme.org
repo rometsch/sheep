@@ -2,6 +2,7 @@
 #+AUTHOR: Thomas Rometsch
 #+SETUPFILE: styles/theme-readtheorg-local.setup
 #+PROPERTY: header-args :eval never-export
+#+filetags: sheep
 
 * Introduction
 
@@ -106,16 +107,16 @@ For my programs and simulations a container file could be structured as follows
    +---> ...
 #+END_EXAMPLE
 
-** TODO describe new structure with sheep dir and give it a version number
-SCHEDULED: <2018-08-22 Mi>
 
 * Enhancements
 
-** TODO allow specifying inital conditions for planet systems
+** DONE allow specifying inital conditions for planet systems
 SCHEDULED: <2018-08-22 Mi>
 
 Both, PlutoCUDA and Fargo3d, support setting intial conditions of planets using a simple tab separated ini file.
 Write a parser for this file an make it available in sheep.
+
+Done in new scripts
 
 ** DONE save tars to remote host directly
 SCHEDULED: <2018-08-23 Do>
